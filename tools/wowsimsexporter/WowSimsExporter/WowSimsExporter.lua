@@ -10,6 +10,8 @@ WowSimsExporter = LibStub("AceAddon-3.0"):NewAddon("WowSimsExporter", "AceConsol
 WowSimsExporter.Character = ""
 WowSimsExporter.Link = "https://wowsims.github.io/classic/"
 
+local IS_CLASSIC_ERA = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
+
 local AceGUI = LibStub("AceGUI-3.0")
 local LibParse = LibStub("LibParse")
 
@@ -139,7 +141,9 @@ function WowSimsExporter:createItemFromItemLink(itemLink)
 	item = {}
 	item.id = tonumber(Id)
 	item.enchant = tonumber(Enchant)
-	item.gems = {tonumber(Gem1), tonumber(Gem2), tonumber(Gem3), tonumber(Gem4)}
+	if not IS_CLASSIC_ERA then
+		item.gems = {tonumber(Gem1), tonumber(Gem2), tonumber(Gem3), tonumber(Gem4)}
+	end
 	return item
 end
 
@@ -169,6 +173,23 @@ function considerItemReplacement(itemLink)
 	return itemRarity == 3 or itemRarity == 4 or itemRarity == 5
 end
 
+-- Returns rune spell for an item, if item has a rune engraved.
+-- Leave bagId nil to check equipped items.
+local function getRuneSpellForItem(slotId, bagId)
+	if not IS_CLASSIC_ERA or not C_Engraving then return end
+
+	local runeData
+	if bagId == nil then
+		runeData = C_Engraving.GetRuneForEquipmentSlot(slotId)
+	else
+		runeData = C_Engraving.GetRuneForInventorySlot(bagId, slotId)
+	end
+
+	if runeData then
+		return runeData.learnedAbilitySpellIDs[1]
+	end
+end
+
 function WowSimsExporter:GetGearEnchantGems(withBags)
 	self.Character.gear = {}
 	self.Character.bagItems = {}
@@ -181,7 +202,9 @@ function WowSimsExporter:GetGearEnchantGems(withBags)
 				local slotId = GetInventorySlotInfo(slotNames[slotNum])
 				local itemLink = GetInventoryItemLink("player", slotId)
 				if itemLink then
-					equippedGear[slotNum] = self:createItemFromItemLink(itemLink)
+					local itemData = self:createItemFromItemLink(itemLink)
+					itemData.rune = getRuneSpellForItem(slotId)
+					equippedGear[slotNum] = itemData
 				end
 		end
 
@@ -197,7 +220,9 @@ function WowSimsExporter:GetGearEnchantGems(withBags)
 		for slot = 1, GetContainerNumSlots(bag) do
 			local itemLink = GetContainerItemLink(bag, slot)
 			if itemLink and considerItemReplacement(itemLink) then
-				table.insert(bagGear, self:createItemFromItemLink(itemLink))
+				local itemData = self:createItemFromItemLink(itemLink)
+				itemData.rune = getRuneSpellForItem(slot, bag)
+				table.insert(bagGear, itemData)
 			end
 		end
 	end
