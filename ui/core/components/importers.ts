@@ -403,24 +403,42 @@ export class IndividualAddonImporter<SpecType extends Spec> extends Importer {
 		`;
 	}
 
+	setInput(inputString: string) {
+		this.textElem.value = inputString;
+	}
+
 	async onImport(data: string) {
-		const importJson = JSON.parse(data);
+		if (!data) return;
+
+		let importJson: any;
+		try {
+			importJson = JSON.parse(data);
+		} catch (error) {
+			let errString = 'Could not parse data:\n';
+			if (error instanceof Error) errString += error.message;
+			alert(errString);
+			return;
+		}
 
 		// Parse all the settings.
 		const charClass = nameToClass((importJson['class'] as string) || '');
 		if (charClass == Class.ClassUnknown) {
+			alert('Could not parse Class!');
 			throw new Error('Could not parse Class!');
 		}
 
 		const race = nameToRace((importJson['race'] as string) || '');
 		if (race == Race.RaceUnknown) {
+			alert('Could not parse Race!');
 			throw new Error('Could not parse Race!');
 		}
 
 		const professions = (importJson['professions'] as Array<{ name: string, level: number }>).map(profData => nameToProfession(profData.name));
 		professions.forEach((prof, i) => {
 			if (prof == Profession.ProfessionUnknown) {
-				throw new Error(`Could not parse profession '${importJson['professions'][i]}'`);
+				const errStr = `Could not parse profession '${importJson['professions'][i]}'`;
+				alert(errStr);
+				throw new Error(errStr);
 			}
 		});
 
@@ -431,5 +449,57 @@ export class IndividualAddonImporter<SpecType extends Spec> extends Importer {
 		const equipmentSpec = EquipmentSpec.fromJson(gearJson);
 
 		this.finishIndividualImport(this.simUI, charClass, race, equipmentSpec, talentsStr, professions);
+	}
+}
+
+export class IndividualAddonUrlImporter {
+	static isAddonExportUrl(location: Location): boolean {
+		const hash = location.hash;
+		return hash.length > 1 && hash.indexOf("#WSE") === 0;
+	}
+
+	/**
+	 * Tries to parse addon export data from location and then
+	 * opens {@link IndividualAddonImporter} with prefilled import data.
+	 * @param simUI 
+	 * @param location 
+	 */
+	static startImportFromLocation<SpecType extends Spec>(simUI: IndividualSimUI<SpecType>, location: Location): void {
+		if (!this.isAddonExportUrl(location)) return;
+		
+		// Expected URL format: #WSE-addonVersion-type-base64data-END
+		const urlPartCount = 5;
+		const split = location.hash.split('-');
+
+		if (split.length != urlPartCount || split[urlPartCount - 1] != 'END') {
+			alert('Addon URL Import: URL was incomplete! Did you copy everything?');
+			return;
+		}
+
+		const addonVersion = split[1];
+		const exportType = split[2];
+		let exportData = split[3];
+
+		if (exportType != 'character') {
+			alert(`Addon URL Import: Type "${exportType}" is not known!`);
+			return;
+		}
+
+		// = will be replaced by _ in URL!
+		exportData = exportData.replace(/_/g, "=");
+		exportData = atob(exportData);
+
+		try {
+			const inflated = pako.inflateRaw(exportData);
+			const decoder = new TextDecoder();
+			exportData = decoder.decode(inflated);
+		} catch (error) {
+			alert(`Addon URL Import: Data inflation failed!\nddon version: ${addonVersion}\nExport type: ${exportType}`);
+			console.error(error);
+			return;
+		}
+
+		const addonImporter = new IndividualAddonImporter(simUI.rootElem, simUI);
+		addonImporter.setInput(exportData);
 	}
 }

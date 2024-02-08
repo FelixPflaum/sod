@@ -297,16 +297,21 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 				}
 			}
 
-			// Loading from link needs to happen after loading saved settings, so that partial link imports
-			// (e.g. rotation only) include the previous settings for other categories.
-			try {
-				const urlParseResults = Importers.IndividualLinkImporter.tryParseUrlLocation(window.location);
-				if (urlParseResults) {
-					this.fromProto(initEventID, urlParseResults.settings, urlParseResults.categories);
+			if (Importers.IndividualAddonUrlImporter.isAddonExportUrl(window.location)) {
+				Importers.IndividualAddonUrlImporter.startImportFromLocation(this, window.location);
+			} else {
+				// Loading from link needs to happen after loading saved settings, so that partial link imports
+				// (e.g. rotation only) include the previous settings for other categories.
+				try {
+					const urlParseResults = Importers.IndividualLinkImporter.tryParseUrlLocation(window.location);
+					if (urlParseResults) {
+						this.fromProto(initEventID, urlParseResults.settings, urlParseResults.categories);
+					}
+				} catch (e) {
+					console.warn('Failed to parse link settings: ' + e);
 				}
-			} catch (e) {
-				console.warn('Failed to parse link settings: ' + e);
 			}
+
 			window.location.hash = '';
 
 			this.player.setName(initEventID, 'Player');
