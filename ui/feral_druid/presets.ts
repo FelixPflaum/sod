@@ -1,4 +1,4 @@
-import { Phase } from '../core/constants/other.js';
+import { CURRENT_PHASE, Phase } from '../core/constants/other.js';
 import {
 	Consumes,
 	Flask,
@@ -22,6 +22,7 @@ import * as PresetUtils from '../core/preset_utils.js';
 
 import BlankGear from './gear_sets/blank.gear.json';
 import Phase1Gear from './gear_sets/p1.gear.json';
+import Phase2Gear from './gear_sets/p2.gear.json';
 
 import DefaultApl from './apls/default.apl.json';
 
@@ -35,17 +36,19 @@ import DefaultApl from './apls/default.apl.json';
 
 export const GearBlank = PresetUtils.makePresetGear('Blank', BlankGear);
 export const GearPhase1 = PresetUtils.makePresetGear('Phase 1', Phase1Gear);
+export const GearPhase2 = PresetUtils.makePresetGear('Phase 2', Phase2Gear);
 
 export const GearPresets = {
   [Phase.Phase1]: [
     GearPhase1,
   ],
   [Phase.Phase2]: [
+	GearPhase2
   ]
 };
 
 // TODO: Add Phase 2 preset and pull from map
-export const DefaultGear = GearPresets[Phase.Phase1][0];
+export const DefaultGear = GearPresets[CURRENT_PHASE][0];
 
 ///////////////////////////////////////////////////////////////////////////
 //                                 APL Presets
