@@ -9,7 +9,9 @@ import {
 	Conjured,
 	WeaponImbue,
 	AgilityElixir,
-	StrengthBuff
+	StrengthBuff,
+	UnitReference,
+	UnitReference_Type
 } from '../core/proto/common.js';
 import { SavedTalents } from '../core/proto/ui.js';
 
@@ -137,16 +139,20 @@ export const DefaultTalents = TalentPresets[CURRENT_PHASE][0];
 export const DefaultOptions = FeralDruidOptions.create({
 	latencyMs: 100,
 	assumeBleedActive: true,
+	innervateTarget: UnitReference.create({
+		type: UnitReference_Type.Player,
+		index: 0,
+	}),
 });
 
 export const DefaultConsumes = Consumes.create({
 	flask: Flask.FlaskUnknown,
-	food: Food.FoodSmokedSagefish,
-	defaultPotion: Potions.ManaPotion,
-	defaultConjured: Conjured.ConjuredMinorRecombobulator,
-	mainHandImbue: WeaponImbue.BlackfathomSharpeningStone,
-	agilityElixir: AgilityElixir.ElixirOfLesserAgility,
-	strengthBuff: StrengthBuff.ElixirOfOgresStrength,
+	food: Food.FoodDragonbreathChili,
+	defaultPotion: Potions.GreaterManaPotion,
+	defaultConjured: Conjured.ConjuredUnknown,
+	mainHandImbue: WeaponImbue.WeaponImbueUnknown,
+	agilityElixir: AgilityElixir.ElixirOfAgility,
+	strengthBuff: StrengthBuff.ScrollOfStrength,
 	boglingRoot: true,
 });
 
