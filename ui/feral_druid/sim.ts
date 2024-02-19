@@ -112,15 +112,17 @@ const SPEC_CONFIG = registerSpecConfig(Spec.SpecFeralDruid, {
 			arcaneBrilliance: true,
 			giftOfTheWild: TristateEffect.TristateEffectRegular,
 			battleShout: TristateEffect.TristateEffectRegular,
+			strengthOfEarthTotem: TristateEffect.TristateEffectRegular,
+			hornOfLordaeron: true
 		}),
 
 		partyBuffs: PartyBuffs.create({}),
 
 		individualBuffs: IndividualBuffs.create({
-			blessingOfMight: TristateEffect.TristateEffectImproved,
 			blessingOfWisdom: TristateEffect.TristateEffectRegular,
 			boonOfBlackfathom: true,
 			ashenvalePvpBuff: true,
+			sparkOfInspiration: true,
 			saygesFortune: SaygesFortune.SaygesDamage,
 		}),
 
@@ -128,7 +130,7 @@ const SPEC_CONFIG = registerSpecConfig(Spec.SpecFeralDruid, {
 			judgementOfWisdom: false,
 			giftOfArthas: false,
 			exposeArmor: TristateEffect.TristateEffectMissing,
-			faerieFire: false,
+			faerieFire: true,
 			sunderArmor: true,
 			curseOfRecklessness: false,
 			homunculi: 0,
