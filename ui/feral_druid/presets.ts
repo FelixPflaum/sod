@@ -95,16 +95,40 @@ export const TalentsPhase1 = {
 	}),
 };
 
+export const TalentsPhase2_0_26_5 ={
+	name: '0/26/5',
+	data: SavedTalents.create({
+		talentsString: '-550002032320211-05',
+	}),
+};
+
+export const TalentsPhase2_9_17_5 ={
+	name: '9/17/5',
+	data: SavedTalents.create({
+		talentsString: '500004-550002032-05',
+	}),
+};
+
+export const TalentsPhase2_0_31_0 ={
+	name: 'LotP',
+	data: SavedTalents.create({
+		talentsString: '-5500020323202151',
+	}),
+};
+
 export const TalentPresets = {
   [Phase.Phase1]: [
     TalentsPhase1,
   ],
   [Phase.Phase2]: [
+	TalentsPhase2_0_26_5,
+	TalentsPhase2_9_17_5,
+	TalentsPhase2_0_31_0,
   ]
 };
 
 // TODO: Add Phase 2 preset and pull from map
-export const DefaultTalents = TalentPresets[Phase.Phase1][0];
+export const DefaultTalents = TalentPresets[CURRENT_PHASE][0];
 
 ///////////////////////////////////////////////////////////////////////////
 //                                 Options
