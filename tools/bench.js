@@ -452,7 +452,6 @@ for (const arg of process.argv) {
         doComp = true;
         break;
     }
-    doComp = true;
 }
 
 if (doComp) {
