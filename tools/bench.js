@@ -58,6 +58,11 @@ function findSpecBenchs() {
                         }
                     }
                 }
+            } else if (specDir.includes("_test.go")) {
+                const specFileData = fs.readFileSync(path.join(classDir, specDir));
+                if (specFileData.includes("func Benchmark")) {
+                    found.push(`${classStr}`);
+                }
             }
         }
     }
@@ -194,7 +199,6 @@ async function benchMenu() {
     
     const specsWithBenchs = findSpecBenchs();
     console.log("Found benchmarks: " + specsWithBenchs.join(", "));
-    const choices = specsWithBenchs.map((v, i) => `${i+1}: ${v}`);
     
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
@@ -210,6 +214,12 @@ async function benchMenu() {
             });
         });
     }
+
+    if (label.includes("{time}")) {
+        const now = new Date();
+        label = label.replace("{time}", `${now.getUTCFullYear()}-${now.getUTCMonth()+1}-${now.getUTCDate()}_${now.getUTCHours()}_${now.getUTCMinutes()}`);
+    }
+
     console.log("Using label " + label);
 
     while (!count) {
@@ -226,7 +236,7 @@ async function benchMenu() {
     }
     while (!timeSec) {
         const n = await new Promise((res, rej) => {
-            rl.question("Enter time per spec (default 3s): ", answer => {
+            rl.question("Enter time per spec (default 5s): ", answer => {
                 res(answer);
             });
         });
@@ -238,6 +248,7 @@ async function benchMenu() {
     }
     console.log(`Will run each spec ${timeSec}s x ${count} times.`);
 
+    const choices = specsWithBenchs.map((v, i) => `${i+1}: ${v}`);
     while (choice.length == 0) {
         const chosen = await new Promise((res, rej) => {
             rl.question("Which spec to run? Seperate multiple choices with a comma.\n" + choices.join("\n") + "\nChoices (Default=all): ", answer => {
@@ -246,18 +257,19 @@ async function benchMenu() {
         });
 
         if (!chosen) {
-            choice[0] = 0;
+            choice[0] = -1;
         } else {
             const specsChosen = chosen.split(",").map(v => parseInt(v.trim()));
             for (const specNum of specsChosen) {
                 if (specNum === 0) {
-                    choice = [0];
+                    choice = [-1];
                     break;
                 }
                 if (specNum && specNum > 0 && specNum <= choices.length) choice.push(specNum - 1);
             }
         }
     }
+    if (choice[0] == -1) choice = specsWithBenchs.map((_, i) => i);
 
     rl.close();
 
