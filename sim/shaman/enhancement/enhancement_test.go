@@ -62,58 +62,30 @@ func TestEnhancement(t *testing.T) {
 }
 
 func BenchmarkSimulate(b *testing.B) {
-	core.Each([]*proto.RaidSimRequest{
+	core.Each([]*proto.Player{
 		{
-			Raid: core.SinglePlayerRaidProto(
-				&proto.Player{
-					Race:          proto.Race_RaceOrc,
-					Class:         proto.Class_ClassShaman,
-					Level:         25,
-					TalentsString: Phase1Talents,
-					Equipment:     core.GetGearSet("../../../ui/enhancement_shaman/gear_sets", "phase_1").GearSet,
-					Rotation:      core.GetAplRotation("../../../ui/enhancement_shaman/apls", "phase_1").Rotation,
-					Consumes:      Phase1Consumes.Consumes,
-					Spec:          PlayerOptionsSyncAuto,
-					Buffs:         core.FullIndividualBuffsPhase1,
-				},
-				core.FullPartyBuffs,
-				core.FullRaidBuffsPhase1,
-				core.FullDebuffsPhase1,
-			),
-			Encounter: &proto.Encounter{
-				Duration: 120,
-				Targets: []*proto.Target{
-					core.NewDefaultTarget(25),
-				},
-			},
-			SimOptions: core.AverageDefaultSimTestOptions,
+			Race:          proto.Race_RaceOrc,
+			Class:         proto.Class_ClassShaman,
+			Level:         25,
+			TalentsString: Phase1Talents,
+			Equipment:     core.GetGearSet("../../../ui/enhancement_shaman/gear_sets", "phase_1").GearSet,
+			Rotation:      core.GetAplRotation("../../../ui/enhancement_shaman/apls", "phase_1").Rotation,
+			Consumes:      Phase1Consumes.Consumes,
+			Spec:          PlayerOptionsSyncAuto,
+			Buffs:         core.FullIndividualBuffsPhase1,
 		},
 		{
-			Raid: core.SinglePlayerRaidProto(
-				&proto.Player{
-					Race:          proto.Race_RaceOrc,
-					Class:         proto.Class_ClassShaman,
-					Level:         40,
-					TalentsString: Phase2Talents,
-					Equipment:     core.GetGearSet("../../../ui/enhancement_shaman/gear_sets", "phase_2").GearSet,
-					Rotation:      core.GetAplRotation("../../../ui/enhancement_shaman/apls", "phase_2").Rotation,
-					Consumes:      Phase2ConsumesWFWF.Consumes,
-					Spec:          PlayerOptionsSyncAuto,
-					Buffs:         core.FullIndividualBuffsPhase2,
-				},
-				core.FullPartyBuffs,
-				core.FullRaidBuffsPhase2,
-				core.FullDebuffsPhase2,
-			),
-			Encounter: &proto.Encounter{
-				Duration: 120,
-				Targets: []*proto.Target{
-					core.NewDefaultTarget(40),
-				},
-			},
-			SimOptions: core.AverageDefaultSimTestOptions,
+			Race:          proto.Race_RaceOrc,
+			Class:         proto.Class_ClassShaman,
+			Level:         40,
+			TalentsString: Phase2Talents,
+			Equipment:     core.GetGearSet("../../../ui/enhancement_shaman/gear_sets", "phase_2").GearSet,
+			Rotation:      core.GetAplRotation("../../../ui/enhancement_shaman/apls", "phase_2").Rotation,
+			Consumes:      Phase2ConsumesWFWF.Consumes,
+			Spec:          PlayerOptionsSyncAuto,
+			Buffs:         core.FullIndividualBuffsPhase2,
 		},
-	}, func(rsr *proto.RaidSimRequest) { core.RaidBenchmark(b, rsr) })
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
 }
 
 var Phase1Talents = "-5005202101"

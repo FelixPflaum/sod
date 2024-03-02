@@ -73,56 +73,29 @@ func TestShockadin(t *testing.T) {
 }
 
 func BenchmarkSimulate(b *testing.B) {
-	core.Each([]*proto.RaidSimRequest{
+	core.Each([]*proto.Player{
 		{
-			Raid: core.SinglePlayerRaidProto(
-				&proto.Player{
-					Race:          proto.Race_RaceHuman,
-					Class:         proto.Class_ClassPaladin,
-					Level:         25,
-					TalentsString: Phase1RetTalents,
-					Equipment:     core.GetGearSet("../../../ui/retribution_paladin/gear_sets", "p1ret").GearSet,
-					Rotation:      core.GetAplRotation("../../../ui/retribution_paladin/apls", "p1ret").Rotation,
-					Consumes:      Phase1Consumes.Consumes,
-					Spec:          PlayerOptionsSealofCommand,
-					Buffs:         core.FullIndividualBuffsPhase1,
-				},
-				core.FullPartyBuffs,
-				core.FullRaidBuffsPhase1,
-				core.FullDebuffsPhase1,
-			),
-			Encounter: &proto.Encounter{
-				Duration: 120,
-				Targets: []*proto.Target{
-					core.NewDefaultTarget(25),
-				},
-			},
-			SimOptions: core.AverageDefaultSimTestOptions,
+			Race:          proto.Race_RaceHuman,
+			Class:         proto.Class_ClassPaladin,
+			Level:         25,
+			TalentsString: Phase1RetTalents,
+			Equipment:     core.GetGearSet("../../../ui/retribution_paladin/gear_sets", "p1ret").GearSet,
+			Rotation:      core.GetAplRotation("../../../ui/retribution_paladin/apls", "p1ret").Rotation,
+			Consumes:      Phase1Consumes.Consumes,
+			Spec:          PlayerOptionsSealofCommand,
+			Buffs:         core.FullIndividualBuffsPhase1,
 		},
 		{
-			Raid: core.SinglePlayerRaidProto(
-				&proto.Player{
-					Race:          proto.Race_RaceHuman,
-					Class:         proto.Class_ClassPaladin,
-					Level:         40,
-					TalentsString: Phase2RetTalents,
-					Equipment:     core.GetGearSet("../../../ui/retribution_paladin/gear_sets", "p2ret").GearSet,
-					Rotation:      core.GetAplRotation("../../../ui/retribution_paladin/apls", "p2ret").Rotation,
-					Consumes:      Phase2Consumes.Consumes,
-					Spec:          PlayerOptionsSealofCommand,
-					Buffs:         core.FullIndividualBuffsPhase2,
-				},
-				core.FullPartyBuffs,
-				core.FullRaidBuffsPhase2,
-				core.FullDebuffsPhase2,
-			),
-			Encounter: &proto.Encounter{
-				Duration: 120,
-				Targets: []*proto.Target{
-					core.NewDefaultTarget(40),
-				},
-			},
-			SimOptions: core.AverageDefaultSimTestOptions,
+
+			Race:          proto.Race_RaceHuman,
+			Class:         proto.Class_ClassPaladin,
+			Level:         40,
+			TalentsString: Phase2RetTalents,
+			Equipment:     core.GetGearSet("../../../ui/retribution_paladin/gear_sets", "p2ret").GearSet,
+			Rotation:      core.GetAplRotation("../../../ui/retribution_paladin/apls", "p2ret").Rotation,
+			Consumes:      Phase2Consumes.Consumes,
+			Spec:          PlayerOptionsSealofCommand,
+			Buffs:         core.FullIndividualBuffsPhase2,
 		},
 		// {
 		// 	Raid: core.SinglePlayerRaidProto(
@@ -149,7 +122,7 @@ func BenchmarkSimulate(b *testing.B) {
 		// 	},
 		// 	SimOptions: core.AverageDefaultSimTestOptions,
 		// },
-	}, func(rsr *proto.RaidSimRequest) { core.RaidBenchmark(b, rsr) })
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
 }
 
 var Phase1RetTalents = "--05230051"

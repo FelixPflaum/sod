@@ -51,6 +51,22 @@ func TestShadow(t *testing.T) {
 	}))
 }
 
+func BenchmarkSimulate(b *testing.B) {
+	core.Each([]*proto.Player{
+		{
+			Race:          proto.Race_RaceUndead,
+			Class:         proto.Class_ClassPriest,
+			Level:         40,
+			TalentsString: Phase2Talents,
+			Equipment:     core.GetGearSet("../../../ui/shadow_priest/gear_sets", "phase_2").GearSet,
+			Rotation:      core.GetAplRotation("../../../ui/shadow_priest/apls", "phase_2").Rotation,
+			Consumes:      Phase2Consumes.Consumes,
+			Spec:          PlayerOptionsBasic,
+			Buffs:         core.FullIndividualBuffsPhase2,
+		},
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
+}
+
 var Phase1Talents = "-20535000001"
 var Phase2Talents = "--5022204002501251"
 

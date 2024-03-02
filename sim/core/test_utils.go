@@ -309,6 +309,34 @@ func RaidSimTest(label string, t *testing.T, rsr *proto.RaidSimRequest, expected
 	}
 }
 
+func SpecBenchmark(b *testing.B, player *proto.Player) {
+	rsr := proto.RaidSimRequest{
+		Raid: SinglePlayerRaidProto(
+			player,
+			FullPartyBuffs,
+			FullRaidBuffsPhase2,
+			FullDebuffsPhase2,
+		),
+		Encounter: &proto.Encounter{
+			Duration: 120,
+			Targets: []*proto.Target{
+				NewDefaultTarget(40),
+			},
+		},
+		SimOptions: AverageDefaultSimTestOptions,
+	}
+
+	rsr.SimOptions.Iterations = 1000
+	rsr.SimOptions.IsTest = false
+
+	for i := 0; i < b.N; i++ {
+		result := RunRaidSim(&rsr)
+		if result.ErrorResult != "" {
+			b.Fatalf("RaidBenchmark() at iteration %d failed: %v", i, result.ErrorResult)
+		}
+	}
+}
+
 func RaidBenchmark(b *testing.B, rsr *proto.RaidSimRequest) {
 	rsr.Encounter.Duration = LongDuration
 	rsr.SimOptions.Iterations = 1

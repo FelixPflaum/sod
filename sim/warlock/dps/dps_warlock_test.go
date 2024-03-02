@@ -91,6 +91,22 @@ func TestDestruction(t *testing.T) {
 	}))
 }
 
+func BenchmarkSimulate(b *testing.B) {
+	core.Each([]*proto.Player{
+		{
+			Race:          proto.Race_RaceOrc,
+			Class:         proto.Class_ClassWarlock,
+			Level:         40,
+			TalentsString: Phase2DestructionTalents,
+			Equipment:     core.GetGearSet("../../../ui/warlock/gear_sets/p2", "fire.imp").GearSet,
+			Rotation:      core.GetAplRotation("../../../ui/warlock/apls/p2", "fire.imp").Rotation,
+			Consumes:      Phase2Consumes.Consumes,
+			Spec:          DefaultDestroWarlock,
+			Buffs:         core.FullIndividualBuffsPhase2,
+		},
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
+}
+
 var Phase1DestructionTalents = "-03-0550201"
 
 var Phase2AfflictionTalents = "3500253012201105--1"
