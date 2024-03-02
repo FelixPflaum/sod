@@ -132,7 +132,7 @@ func TestSV(t *testing.T) {
 	}))
 }
 
-func BenchmarkSimulate(b *testing.B) {
+func BenchmarkRangedBM(b *testing.B) {
 	core.Each([]*proto.Player{
 		{
 			Race:          proto.Race_RaceOrc,
@@ -145,6 +145,11 @@ func BenchmarkSimulate(b *testing.B) {
 			Spec:          Phase2PlayerOptions,
 			Buffs:         core.FullIndividualBuffsPhase2,
 		},
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
+}
+
+func BenchmarkRangedMM(b *testing.B) {
+	core.Each([]*proto.Player{
 		{
 			Race:          proto.Race_RaceOrc,
 			Class:         proto.Class_ClassHunter,
@@ -156,6 +161,11 @@ func BenchmarkSimulate(b *testing.B) {
 			Spec:          Phase2PlayerOptions,
 			Buffs:         core.FullIndividualBuffsPhase2,
 		},
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
+}
+
+func BenchmarkMelee(b *testing.B) {
+	core.Each([]*proto.Player{
 		{
 			Race:          proto.Race_RaceOrc,
 			Class:         proto.Class_ClassHunter,

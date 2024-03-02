@@ -8,8 +8,7 @@ const CLASSES = ["druid", "hunter", "paladin", "rogue", "mage", "priest", "shama
 /**
  * @typedef SpecResult
  * @prop {string} name The class/spec string used.
- * @prop {number} timeSec
- * @prop {number} count
+ * @prop {string} funcName The name of the function used.
  * @prop {{iterations: number, nsperop: number}[]} runs The individual run results.
  * @prop {number} avg The average ns/op
  * @prop {number} dev The max. deviation from the average as a decimal.
@@ -17,6 +16,8 @@ const CLASSES = ["druid", "hunter", "paladin", "rogue", "mage", "priest", "shama
  * 
  * @typedef BenchResult
  * @prop {string} label Label to save the bench with.
+ * @prop {number} timeSec The time per bench run.
+ * @prop {number} count The count of runs per spec.
  * @prop {{[classSpec: string]: SpecResult}} results
  * @prop {number} totalAvg The average ns/op over all specs.
  * @prop {number} devMax The max. deviation of all specs.
@@ -71,11 +72,54 @@ function findSpecBenchs() {
 }
 
 /**
+ * 
+ * @param {string} specExt
+ * @returns {SpecResult}
+ */
+function newSpecResult(specExt) {
+    return {
+        name: specExt,
+        funcName: "",
+        runs: [],
+        avg: 0,
+        dev: 0,
+        stdDev: 0,
+    }
+}
+
+/**
+ * 
+ * @param {SpecResult} specResult 
+ */
+function finishSpecResult(specResult) {
+    let min = Number.MAX_SAFE_INTEGER;
+    let max = 0;
+    let sum = 0;
+
+    for (const run of specResult.runs) {
+        sum += run.nsperop;
+        if (min > run.nsperop) min = run.nsperop;
+        if (max < run.nsperop) max = run.nsperop;
+    }
+
+    specResult.avg = Math.round(sum / specResult.runs.length);
+    const maxDist = Math.max(max - specResult.avg, specResult.avg - min);
+    specResult.dev = maxDist / specResult.avg;
+
+    let variance = 0;
+    for (const run of specResult.runs) {
+        variance += Math.pow(run.nsperop - specResult.avg, 2);
+    }
+    variance /= specResult.runs.length;
+    specResult.stdDev = Math.sqrt(variance);
+}
+
+/**
  * Run a spec benchmark.
  * @param {string} specExt The class/spec directory string.
  * @param {number} timeSec Time in seconds for each run.
  * @param {number} count The number of runs.
- * @returns {Promise<SpecResult>} Promise resolving to the result of the bench.
+ * @returns {Promise<SpecResult[]>} Promise resolving to the result of the bench.
  */
 function runSpecBench(specExt, timeSec, count) {
     const run = spawn("go", [
@@ -92,12 +136,8 @@ function runSpecBench(specExt, timeSec, count) {
     run.stdout.setEncoding("utf-8");
     run.stderr.setEncoding("utf-8");
 
-    const specResult = {
-        name: specExt,
-        timeSec: timeSec,
-        count: count,
-        runs: [],
-    }
+    const specResults = [newSpecResult(specExt)];
+    let specResult = specResults[0];
 
     let output = "";
 
@@ -114,9 +154,15 @@ function runSpecBench(specExt, timeSec, count) {
                 for (let i = 0; i < split.length - 1; i++) {
                     console.log(split[i]);
                     if (split[i].startsWith("Benchmark")) {
-                        const matches = split[i].match(/Benchmark\w+ \t([\s0-9]+)\t([\s0-9]+)ns/);
-                        const iterations = parseInt(matches[1].trim());
-                        const nsperop = parseInt(matches[2].trim());
+                        const matches = split[i].match(/(Benchmark\w+)\s+(\d+)\s+(\d+) ns/);
+                        if (specResult.funcName != "" && matches[1] != specResult.funcName) {
+                            finishSpecResult(specResult);
+                            specResult = newSpecResult(specExt);
+                            specResults.push(specResult);
+                        }
+                        specResult.funcName = matches[1];
+                        const iterations = parseInt(matches[2].trim());
+                        const nsperop = parseInt(matches[3].trim());
                         specResult.runs.push({iterations, nsperop});
                     }
                 }
@@ -131,29 +177,8 @@ function runSpecBench(specExt, timeSec, count) {
                 console.error("Exit code not 0, was " + code);
                 reject();
             }
-
-            let min = Number.MAX_SAFE_INTEGER;
-            let max = 0;
-            let sum = 0;
-
-            for (const run of specResult.runs) {
-                sum += run.nsperop;
-                if (min > run.nsperop) min = run.nsperop;
-                if (max < run.nsperop) max = run.nsperop;
-            }
-
-            specResult.avg = Math.round(sum / specResult.runs.length);
-            const maxDist = Math.max(max - specResult.avg, specResult.avg - min);
-            specResult.dev = maxDist / specResult.avg;
-
-            let variance = 0;
-            for (const run of specResult.runs) {
-                variance += Math.pow(run.nsperop - specResult.avg, 2);
-            }
-            variance /= specResult.runs.length;
-            specResult.stdDev = Math.sqrt(variance);
-
-            resolve(specResult);
+            finishSpecResult(specResult)
+            resolve(specResults);
         });
     });
 }
@@ -169,6 +194,8 @@ async function runBenches(label, specs, timeSec, count) {
     /** @type {BenchResult} */
     const benchResult = {
         label: label,
+        timeSec: timeSec,
+        count: count,
         results: {},
         totalAvg: 0,
         devMax: 0,
@@ -177,12 +204,19 @@ async function runBenches(label, specs, timeSec, count) {
 
     for (const spec of specs) {
         console.log(`Starting benchmark ${spec}, ${timeSec}s x ${count} times...`);
-        const result = await runSpecBench(spec, timeSec, count);
-        console.log(`Done ${spec}: ${nsToMs(result.avg)} ms +-${Math.round(result.dev * 1000) / 10}% (σ ${nsToMs(result.stdDev)} ms)`);
-        benchResult.results[result.name] = result;
-        benchResult.totalAvg += result.avg;
-        if (benchResult.devMax < result.dev) benchResult.devMax = result.dev;
-        if (benchResult.stdDevMax < result.stdDev) benchResult.stdDevMax = result.stdDev;
+        try {
+            const results = await runSpecBench(spec, timeSec, count);
+            for (const result of results) {
+                console.log(`Done ${spec} ${result.funcName}: ${nsToMs(result.avg)} ms +-${Math.round(result.dev * 1000) / 10}% (σ ${nsToMs(result.stdDev)} ms)`);
+                benchResult.results[`${result.name}_${result.funcName}`] = result;
+                benchResult.totalAvg += result.avg;
+                if (benchResult.devMax < result.dev) benchResult.devMax = result.dev;
+                if (benchResult.stdDevMax < result.stdDev) benchResult.stdDevMax = result.stdDev;
+            }
+        } catch (error) {
+            console.error(error);
+            console.error("Skipping class/spec " + spec + " due to error!");
+        }
     }
 
     benchResult.totalAvg = Math.round(benchResult.totalAvg / specs.length);
