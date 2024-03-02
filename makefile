@@ -231,6 +231,10 @@ update-tests:
 	find . -name "*.results" -type f -delete
 	find . -name "*.results.tmp" -exec bash -c 'cp "$$1" "$${1%.results.tmp}".results' _ {} \;
 
+.PHONY: bench
+bench: 
+	node ./tools/bench.js
+
 .PHONY: fmt
 fmt: tsfmt
 	gofmt -w ./sim

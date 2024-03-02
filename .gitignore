@@ -23,6 +23,7 @@ google-chrome*
 /sod/
 *.code-workspace
 wowsimsod
+/benchres/
 
 # old result file
 TestAPL.results
