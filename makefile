@@ -235,6 +235,10 @@ update-tests:
 bench: 
 	node ./tools/bench.js
 
+.PHONY: benchcomp
+benchcomp: 
+	node ./tools/bench.js comp
+
 .PHONY: fmt
 fmt: tsfmt
 	gofmt -w ./sim

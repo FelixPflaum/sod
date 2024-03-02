@@ -312,4 +312,151 @@ async function benchMenu() {
     runBenches(label, specChoices, timeSec, count);
 }
 
-benchMenu();
+/**
+ * 
+ * @param {string[][]} data 
+ */
+function comparisonStringTable(data) {
+    let maxLens = [];
+    for (const line of data) {
+        for (let i = 0; i < line.length; i++) {
+            if (!maxLens[i] || line[i].length > maxLens[i]) maxLens[i] = line[i].length;
+        }
+    }
+
+    let str = "";
+
+    for (let i = 0; i < data.length; i++) {
+        str += data[i].map((v, i) => {
+            if (typeof v !== "string") v = v.toString();
+            return v.padEnd(maxLens[i] + 1, " ");
+        }).join("\t") + "\n";
+    }
+
+    return str;
+}
+
+/**
+ * 
+ * @param {string} resOldFile
+ * @param {string} resNewFile
+ */
+function compareResults(resOldFile, resNewFile) {
+    /** @type BenchResult */
+    let oldData;
+    /** @type BenchResult */
+    let newData;
+    try {
+        let data = fs.readFileSync(path.join("benchres", resOldFile), "utf-8");
+        oldData = JSON.parse(data);
+
+        data = fs.readFileSync(path.join("benchres", resNewFile), "utf-8");
+        newData = JSON.parse(data);
+    } catch (error) {
+        console.error(error);
+    }
+
+    /** @type string[][] */
+    const tableData = [
+        ["Benchmark", "Old ms/op", "Old dev", "New ms/op", "New dev", "Delta Pct", "Delta ms"],
+    ]
+
+    for (const spec in oldData.results) {
+        if (!newData.results[spec]) {
+            console.log(`Spec results for ${spec} do not exist in new results.`);
+            continue;
+        }
+        const oldSpec = oldData.results[spec];
+        const newSpec = newData.results[spec];
+
+        tableData.push([
+            spec, 
+            nsToMs(oldSpec.avg),
+            `+-${Math.round(oldSpec.dev * 1000) / 10}% (σ ${nsToMs(oldSpec.stdDev)} ms)`,
+            nsToMs(newSpec.avg),
+            `+-${Math.round(newSpec.dev * 1000) / 10}% (σ ${nsToMs(newSpec.stdDev)} ms)`,
+            `${Math.round((newSpec.avg - oldSpec.avg) / oldSpec.avg * 1000) / 10}%`,
+            nsToMs(newSpec.avg - oldSpec.avg),
+        ]);
+    }
+
+    const dev = newData.totalAvg - oldData.totalAvg;
+    tableData.push([
+        "Total",
+        oldData.totalAvg,
+        `+-${Math.round(oldData.devMax * 1000) / 10}%`,
+        newData.totalAvg,
+        `+-${Math.round(newData.devMax * 1000) / 10}%`,
+        `${Math.round(dev / oldData.totalAvg * 1000) / 100}%`,
+        nsToMs(dev),
+    ]);
+
+    const csv = tableData.map(v => v.join(",")).join("\n");
+    const strTable = comparisonStringTable(tableData);
+    const fname = `comp_${resOldFile.split(".")[0]}_${resNewFile.split(".")[0]}`;
+    fs.writeFileSync(path.join("benchres", fname+".csv"), csv);
+    fs.writeFileSync(path.join("benchres", fname+".txt"), strTable);
+}
+
+async function compareMenu() {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+    const jsons = [];
+
+    try {
+        const files = fs.readdirSync("benchres");
+        for (const file of files) {
+            if (file.endsWith(".json")) {
+                jsons.push(file);
+            }
+        }
+    } catch (error) {
+        console.error(error);
+        return;
+    }
+
+    if (jsons.length == 0) {
+        console.log("No result files found!");
+        return;
+    }
+
+    const choices = jsons.map((v, i) => `${i+1}: ${v}`);
+    let choice = [];
+
+    while (choice == 0) {
+        const chosen = await new Promise((res, rej) => {
+            rl.question("Which results to compare? Specify old and new result seperated by a comma:\n" + choices.join("\n") + "\nChoices: ", answer => {
+                res(answer);
+            });
+        });
+
+        if (chosen)  {
+            const split = chosen.split(",").map((v) => parseInt(v.trim()));
+            if (split.length != 2) continue;
+            for (const num of split) {
+                if (num && num >= 0 && num <= choices.length) choice.push(num - 1);
+            }
+            if (choice.length != 2) choice = [];
+        }
+    }
+
+    rl.close();
+
+    console.log(`Comparing ${jsons[choice[0]]} and ${jsons[choice[1]]}.`);
+    compareResults(jsons[choice[0]], jsons[choice[1]]);
+}
+
+let doComp = false;
+for (const arg of process.argv) {
+    if (arg == "comp") {
+        doComp = true;
+        break;
+    }
+    doComp = true;
+}
+
+if (doComp) {
+    compareMenu();
+} else {
+    benchMenu();
+}
