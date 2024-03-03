@@ -383,9 +383,9 @@ function compareResults(resOldFile, resNewFile) {
     const dev = newData.totalAvg - oldData.totalAvg;
     tableData.push([
         "Total",
-        oldData.totalAvg,
+        nsToMs(oldData.totalAvg),
         `+-${Math.round(oldData.devMax * 1000) / 10}%`,
-        newData.totalAvg,
+        nsToMs(newData.totalAvg),
         `+-${Math.round(newData.devMax * 1000) / 10}%`,
         `${Math.round(dev / oldData.totalAvg * 1000) / 100}%`,
         nsToMs(dev),
