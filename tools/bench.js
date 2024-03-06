@@ -13,7 +13,7 @@ const CLASSES = ["druid", "hunter", "paladin", "rogue", "mage", "priest", "shama
  * @prop {number} avg The average ns/op
  * @prop {number} dev The max. deviation from the average as a decimal.
  * @prop {number} stdDev The standard deviation.
- * 
+ *
  * @typedef BenchResult
  * @prop {string} label Label to save the bench with.
  * @prop {number} timeSec The time per bench run.
@@ -37,7 +37,7 @@ function nsToMs(ns, prec = 3) {
 
 /**
  * Get all spec benchmark targets.
- * @returns {string[]} Array of "class/spec" strings, representing the directory the test files are in. 
+ * @returns {string[]} Array of "class/spec" strings, representing the directory the test files are in.
  */
 function findSpecBenchs() {
     const found = [];
@@ -72,7 +72,7 @@ function findSpecBenchs() {
 }
 
 /**
- * 
+ *
  * @param {string} specExt
  * @returns {SpecResult}
  */
@@ -88,8 +88,8 @@ function newSpecResult(specExt) {
 }
 
 /**
- * 
- * @param {SpecResult} specResult 
+ *
+ * @param {SpecResult} specResult
  */
 function finishSpecResult(specResult) {
     let min = Number.MAX_SAFE_INTEGER;
@@ -123,8 +123,8 @@ function finishSpecResult(specResult) {
  */
 function runSpecBench(specExt, timeSec, count) {
     const run = spawn("go", [
-        "test", 
-        "-run=notestsplx", 
+        "test",
+        "-run=notestsplx",
         "-bench=.",
         "-cpu=1",
         `-benchtime=${timeSec}s`,
@@ -142,12 +142,12 @@ function runSpecBench(specExt, timeSec, count) {
     let output = "";
 
     return new Promise((resolve, reject) => {
-        run.on("error", (err) => {
+        run.on("error", err => {
             console.error(err);
             reject();
         });
 
-        run.stdout.on("data", (data) => {
+        run.stdout.on("data", data => {
             output += data;
             const split = output.split("\n");
             if (split.length > 1) {
@@ -169,10 +169,10 @@ function runSpecBench(specExt, timeSec, count) {
                 output = split[split.length - 1]
             }
         });
-    
-        run.stderr.on("data", (data) => console.error(data));
-    
-        run.on("close", (code) => {
+
+        run.stderr.on("data", data => console.error(data));
+
+        run.on("close", code => {
             if (code !== 0) {
                 console.error("Exit code not 0, was " + code);
                 reject();
@@ -220,7 +220,7 @@ async function runBenches(label, specs, timeSec, count) {
     }
 
     benchResult.totalAvg = Math.round(benchResult.totalAvg / specs.length);
-    
+
     const outfile = `benchres/${label}.json`;
     fs.writeFileSync(outfile, JSON.stringify(benchResult, null, 4));
     console.log("Saved result data to " + outfile);
@@ -230,10 +230,10 @@ async function runBenches(label, specs, timeSec, count) {
  * Show menu to run benchmarks.
  */
 async function benchMenu() {
-    
+
     const specsWithBenchs = findSpecBenchs();
     console.log("Found benchmarks: " + specsWithBenchs.join(", "));
-    
+
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
     let label = "";
@@ -313,8 +313,8 @@ async function benchMenu() {
 }
 
 /**
- * 
- * @param {string[][]} data 
+ *
+ * @param {string[][]} data
  */
 function comparisonStringTable(data) {
     let maxLens = [];
@@ -337,7 +337,7 @@ function comparisonStringTable(data) {
 }
 
 /**
- * 
+ *
  * @param {string} resOldFile
  * @param {string} resNewFile
  */
@@ -356,6 +356,10 @@ function compareResults(resOldFile, resNewFile) {
         console.error(error);
     }
 
+	const infoheader = `Comparing
+Old: ${oldData.label} (Ran ${oldData.count} * ${oldData.timeSec}s per spec bench)
+New: ${newData.label} (Ran ${newData.count} * ${newData.timeSec}s per spec bench)\n\n`;
+
     /** @type string[][] */
     const tableData = [
         ["Benchmark", "Old ms/op", "Old dev", "New ms/op", "New dev", "Delta Pct", "Delta ms"],
@@ -370,7 +374,7 @@ function compareResults(resOldFile, resNewFile) {
         const newSpec = newData.results[spec];
 
         tableData.push([
-            spec, 
+            spec,
             nsToMs(oldSpec.avg),
             `+-${Math.round(oldSpec.dev * 1000) / 10}% (σ ${nsToMs(oldSpec.stdDev)} ms)`,
             nsToMs(newSpec.avg),
@@ -392,10 +396,16 @@ function compareResults(resOldFile, resNewFile) {
     ]);
 
     const csv = tableData.map(v => v.join(",")).join("\n");
-    const strTable = comparisonStringTable(tableData);
+    const strTable = infoheader + comparisonStringTable(tableData);
     const fname = `comp_${resOldFile.split(".")[0]}_${resNewFile.split(".")[0]}`;
-    fs.writeFileSync(path.join("benchres", fname+".csv"), csv);
-    fs.writeFileSync(path.join("benchres", fname+".txt"), strTable);
+
+	let filePath = path.join("benchres", fname+".csv");
+    fs.writeFileSync(filePath, csv);
+	console.log(`Wrote files ${filePath}`);
+
+	filePath = path.join("benchres", fname+".txt");
+    fs.writeFileSync(filePath, strTable);
+	console.log(`Wrote files ${filePath}`);
 }
 
 async function compareMenu() {
@@ -431,7 +441,7 @@ async function compareMenu() {
         });
 
         if (chosen)  {
-            const split = chosen.split(",").map((v) => parseInt(v.trim()));
+            const split = chosen.split(",").map(v => parseInt(v.trim()));
             if (split.length != 2) continue;
             for (const num of split) {
                 if (num && num >= 0 && num <= choices.length) choice.push(num - 1);
