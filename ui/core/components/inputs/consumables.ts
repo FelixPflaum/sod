@@ -1,6 +1,7 @@
 import { Player } from "../../player";
 import {
 	AgilityElixir,
+	Class,
 	Conjured,
 	Consumes,
 	EnchantedSigil,
@@ -100,10 +101,19 @@ export const ConjuredDemonicRune: ConsumableInputConfig<Conjured> = {
 	]),
 	value: Conjured.ConjuredDemonicRune
 }
+export const ConjuredRogueThistleTea: ConsumableInputConfig<Conjured> = {
+	actionId: (player: Player<Spec>) => player.getMatchingItemActionId([
+		{ id: 7676, minLevel: 25 },
+	]),
+	value: Conjured.ConjuredRogueThistleTea,
+	showWhen: (player) => player.getClass() == Class.ClassRogue
+}
+
 
 export const CONJURED_CONFIG: ConsumableStatOption<Conjured>[] = [
 	{ config: ConjuredMinorRecombobulator, 			stats: [Stat.StatIntellect] },
 	{ config: ConjuredDemonicRune, 					stats: [Stat.StatIntellect] },
+	{ config: ConjuredRogueThistleTea,				stats: [Stat.StatAgility]	},
 ]
 
 export const makeConjuredInput = makeConsumeInputFactory({consumesFieldName: 'defaultConjured'});
@@ -138,6 +148,14 @@ export const ExplosiveSolidDynamite: ConsumableInputConfig<Explosive> = {
 	]),
 	showWhen: player => player.hasProfession(Profession.Engineering),
 	value: Explosive.ExplosiveSolidDynamite,
+};
+
+export const ExplosiveGoblinLandMine: ConsumableInputConfig<Explosive> = {
+	actionId: (player: Player<Spec>) => player.getMatchingItemActionId([
+		{ id: 4395, minLevel: 40 },
+	]),
+	showWhen: player => player.hasProfession(Profession.Engineering),
+	value: Explosive.ExplosiveGoblinLandMine,
 };
 
 export const ExplosiveDenseDynamite: ConsumableInputConfig<Explosive> = {
@@ -177,6 +195,7 @@ export const EXPLOSIVES_CONFIG: ConsumableStatOption<Explosive>[] = [
 	{ config: ExplosiveSolidDynamite, 					stats: [] },
 	{ config: ExplosiveDenseDynamite,		 				stats: [] },
 	{ config: ExplosiveThoriumGrenade, 					stats: [] },
+	{ config: ExplosiveGoblinLandMine, 					stats: [] },
 ];
 
 export const makeExplosivesInput = makeConsumeInputFactory({
@@ -731,9 +750,9 @@ const CONSUMABLES_IMBUES = (slot: ItemSlot): ConsumableStatOption<WeaponImbue>[]
 	{ config: WizardOil, 					stats: [Stat.StatSpellPower] },
 	{ config: BrillianWizardOil,	stats: [Stat.StatSpellPower] },
 
-	{ config: MinorManaOil, 			stats: [Stat.StatHealing, Stat.StatSpellPower] },
-	{ config: LesserManaOil, 			stats: [Stat.StatHealing, Stat.StatSpellPower] },
-	{ config: BrilliantManaOil, 	stats: [Stat.StatHealing, Stat.StatSpellPower] },
+	{ config: MinorManaOil, 			stats: [Stat.StatHealingPower, Stat.StatSpellPower] },
+	{ config: LesserManaOil, 			stats: [Stat.StatHealingPower, Stat.StatSpellPower] },
+	{ config: BrilliantManaOil, 	stats: [Stat.StatHealingPower, Stat.StatSpellPower] },
 	{ config: BlackfathomManaOil, stats: [Stat.StatSpellPower, Stat.StatMP5] },
 
 	{ config: SolidSharpeningStone(slot), 			stats: [Stat.StatAttackPower] },
