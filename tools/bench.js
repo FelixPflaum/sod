@@ -1,4 +1,4 @@
-const spawn = require("child_process").spawn;
+const { execSync, spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
@@ -16,6 +16,7 @@ const CLASSES = ["druid", "hunter", "paladin", "rogue", "mage", "priest", "shama
  *
  * @typedef BenchResult
  * @prop {string} label Label to save the bench with.
+ * @prop {{branch: string, shortHash: string}} branchInfo
  * @prop {number} timeSec The time per bench run.
  * @prop {number} count The count of runs per spec.
  * @prop {{[classSpec: string]: SpecResult}} results
@@ -186,14 +187,16 @@ function runSpecBench(specExt, timeSec, count) {
 /**
  * Run benchmarks and save results to file.
  * @param {string} label Label to save the bench with.
+ * @param {{branch: string, shortHash: string}}
  * @param {string[]} specs The class/spec benchmarks to run.
  * @param {number} timeSec The time for each individual run.
  * @param {number} count The run count for each spec.
  */
-async function runBenches(label, specs, timeSec, count) {
+async function runBenches(label, branchInfo, specs, timeSec, count) {
     /** @type {BenchResult} */
     const benchResult = {
         label: label,
+        branchInfo: branchInfo,
         timeSec: timeSec,
         count: count,
         results: {},
@@ -222,8 +225,22 @@ async function runBenches(label, specs, timeSec, count) {
     benchResult.totalAvg = Math.round(benchResult.totalAvg / specs.length);
 
     const outfile = `benchres/${label}.json`;
-    fs.writeFileSync(outfile, JSON.stringify(benchResult, null, 4));
+    if (!fs.existsSync("benchres")){
+        fs.mkdirSync("benchres");
+    }
+    fs.writeFileSync(outfile, JSON.stringify(benchResult, null, 4), {});
     console.log("Saved result data to " + outfile);
+}
+
+function getCurrentBranchInfo() {
+    const branch = execSync("git rev-parse --abbrev-ref HEAD").toString("utf-8").trim();
+    const shortHash = execSync("git rev-parse --short HEAD").toString("utf-8").trim();
+    return {branch, shortHash}
+}
+
+function getTimeStampStr() {
+    const now = new Date();
+    return `${now.getUTCFullYear()}-${now.getUTCMonth()+1}-${now.getUTCDate()}_${now.getUTCHours()}${now.getUTCMinutes()}Z`;
 }
 
 /**
@@ -241,13 +258,17 @@ async function benchMenu() {
     let count = 0;
     let choice = [];
 
-    while (!label) {
-        label = await new Promise((res, rej) => {
-            rl.question("Enter label for this run: ", answer => {
-                res(answer);
-            });
+    const branchInfo = getCurrentBranchInfo();
+    const timeStr = getTimeStampStr();
+    const defaultLabel = branchInfo.branch + "_" + branchInfo.shortHash + "_" + timeStr;
+
+    label = await new Promise((res, rej) => {
+        rl.question(`Enter label for this run (Default=${defaultLabel}): `, answer => {
+            res(answer);
         });
-    }
+    });
+
+    if (!label) label = defaultLabel;
 
     if (label.includes("{time}")) {
         const now = new Date();
@@ -309,7 +330,7 @@ async function benchMenu() {
 
     const specChoices = choice.map(i => specsWithBenchs[i]);
 
-    runBenches(label, specChoices, timeSec, count);
+    runBenches(label, branchInfo, specChoices, timeSec, count);
 }
 
 /**
@@ -409,8 +430,6 @@ New: ${newData.label} (Ran ${newData.count} * ${newData.timeSec}s per spec bench
 }
 
 async function compareMenu() {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
     const jsons = [];
 
     try {
@@ -421,15 +440,19 @@ async function compareMenu() {
             }
         }
     } catch (error) {
-        console.error(error);
+        console.log("No result files found!");
         return;
     }
 
     if (jsons.length == 0) {
         console.log("No result files found!");
         return;
+    } else if (jsons.length == 1) {
+        console.log("Only one result exists, cannot compare!");
+        return;
     }
 
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const choices = jsons.map((v, i) => `${i+1}: ${v}`);
     let choice = [];
 
