@@ -130,6 +130,38 @@ func TestFrostFire(t *testing.T) {
 // 	}))
 // }
 
+func BenchmarkArcane(b *testing.B) {
+	core.Each([]*proto.Player{
+		{
+			Race:          proto.Race_RaceTroll,
+			Class:         proto.Class_ClassMage,
+			Level:         40,
+			TalentsString: Phase2TalentsFire,
+			Equipment:     core.GetGearSet("../../ui/mage/gear_sets", "p2_arcane").GearSet,
+			Rotation:      core.GetAplRotation("../../ui/mage/apls", "p2_arcane").Rotation,
+			Consumes:      Phase2Consumes.Consumes,
+			Spec:          PlayerOptionsArcane,
+			Buffs:         core.FullIndividualBuffsPhase2,
+		},
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
+}
+
+func BenchmarkFire(b *testing.B) {
+	core.Each([]*proto.Player{
+		{
+			Race:          proto.Race_RaceTroll,
+			Class:         proto.Class_ClassMage,
+			Level:         40,
+			TalentsString: Phase2TalentsFire,
+			Equipment:     core.GetGearSet("../../ui/mage/gear_sets", "p2_fire").GearSet,
+			Rotation:      core.GetAplRotation("../../ui/mage/apls", "p2_fire").Rotation,
+			Consumes:      Phase2Consumes.Consumes,
+			Spec:          PlayerOptionsFire,
+			Buffs:         core.FullIndividualBuffsPhase2,
+		},
+	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
+}
+
 var Phase1TalentsArcane = "22500502"
 var Phase1TalentsFire = "-5050020121"
 
