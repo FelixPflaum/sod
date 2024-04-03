@@ -33,9 +33,8 @@ func applyDebuffEffects(target *Unit, targetIdx int, debuffs *proto.Debuffs, rai
 		}
 	}
 
-	if debuffs.ImprovedShadowBolt {
-		//TODO: Apply periodically
-		MakePermanent(ImprovedShadowBoltAura(target, 5))
+	if debuffs.ImprovedShadowBolt && targetIdx == 0 {
+		ExternalIsbCaster(debuffs, target)
 	}
 
 	if debuffs.ShadowWeaving {
@@ -56,6 +55,10 @@ func applyDebuffEffects(target *Unit, targetIdx int, debuffs *proto.Debuffs, rai
 
 	if debuffs.MekkatorqueFistDebuff {
 		MakePermanent(MekkatorqueFistDebuffAura(target, level))
+	}
+
+	if debuffs.SerpentsStrikerFistDebuff {
+		MakePermanent(SerpentsStrikerFistDebuffAura(target, level))
 	}
 
 	if debuffs.CurseOfElements {
@@ -215,25 +218,117 @@ func exclusiveNatureDamageTakenAura(unit *Unit, label string, actionID ActionID)
 	return aura
 }
 
+func ExternalIsbCaster(debuffs *proto.Debuffs, target *Unit) {
+	isbConfig := target.Env.Raid.Parties[0].Players[0].GetCharacter().IsbConfig
+	isbAura := ImprovedShadowBoltAura(target, 5)
+	isbCrit := isbConfig.casterCrit / 100.0
+	var pa *PendingAction
+	MakePermanent(target.GetOrRegisterAura(Aura{
+		Label: "Isb External Proc Aura",
+		OnGain: func(aura *Aura, sim *Simulation) {
+			pa = NewPeriodicAction(sim, PeriodicActionOptions{
+				Period: DurationFromSeconds(isbConfig.shadowBoltFrequency),
+				OnAction: func(s *Simulation) {
+					for i := 0; i < int(isbConfig.isbWarlocks); i++ {
+						if sim.Proc(isbCrit, "External Isb Crit") {
+							isbAura.Activate(sim)
+							isbAura.SetStacks(sim, 4)
+						} else if isbAura.IsActive() {
+							isbAura.RemoveStack(sim)
+						}
+					}
+				},
+			})
+			sim.AddPendingAction(pa)
+		},
+		OnExpire: func(aura *Aura, sim *Simulation) {
+			pa.Cancel(sim)
+		},
+	}))
+}
+
+type IsbConfig struct {
+	shadowBoltFrequency float64
+	casterCrit          float64
+	isbWarlocks         int32
+	isbShadowPriests    int32
+}
+
+func (character *Character) createIsbConfig(player *proto.Player) {
+	character.IsbConfig = IsbConfig{
+		shadowBoltFrequency: player.IsbSbFrequency,
+		casterCrit:          player.IsbCrit,
+		isbWarlocks:         player.IsbWarlocks,
+		isbShadowPriests:    player.IsbSpriests,
+	}
+	//Defaults if not configured
+	if character.IsbConfig.shadowBoltFrequency == 0.0 {
+		character.IsbConfig.shadowBoltFrequency = 3.0
+	}
+	if character.IsbConfig.casterCrit == 0.0 {
+		character.IsbConfig.casterCrit = 25.0
+	}
+	if character.IsbConfig.isbWarlocks == 0 {
+		character.IsbConfig.isbWarlocks = 1
+	}
+}
+
 func ImprovedShadowBoltAura(unit *Unit, rank int32) *Aura {
+	isbLabel := "Improved Shadow Bolt"
+	if unit.GetAura(isbLabel) != nil {
+		return unit.GetAura(isbLabel)
+	}
+
+	isbConfig := unit.Env.Raid.Parties[0].Players[0].GetCharacter().IsbConfig
+
+	priestGcds := []bool{false, true, true, true, true, true}
+	priestCurGcd := 0
+	externalShadowPriests := isbConfig.isbShadowPriests
+	var priestPa *PendingAction
+
 	damageMulti := 1. + 0.04*float64(rank)
-	return unit.GetOrRegisterAura(Aura{
-		Label:     "Improved Shadow Bolt",
+	aura := unit.GetOrRegisterAura(Aura{
+		Label:     isbLabel,
 		ActionID:  ActionID{SpellID: 17800},
 		Duration:  12 * time.Second,
 		MaxStacks: 4,
+		OnReset: func(aura *Aura, sim *Simulation) {
+			// External shadow priests simulation
+			if externalShadowPriests > 0 {
+				priestCurGcd = 0
+				priestPa = NewPeriodicAction(sim, PeriodicActionOptions{
+					Period: GCDDefault,
+					OnAction: func(s *Simulation) {
+						if priestGcds[priestCurGcd] {
+							for i := 0; i < int(externalShadowPriests); i++ {
+								if aura.IsActive() {
+									aura.RemoveStack(sim)
+								}
+							}
+						}
+						priestCurGcd++
+						if priestCurGcd >= len(priestGcds) {
+							priestCurGcd = 0
+						}
+					},
+				})
+				sim.AddPendingAction(priestPa)
+			}
+		},
 		OnGain: func(aura *Aura, sim *Simulation) {
 			aura.Unit.PseudoStats.SchoolDamageTakenMultiplier[stats.SchoolIndexShadow] *= damageMulti
 		},
 		OnExpire: func(aura *Aura, sim *Simulation) {
 			aura.Unit.PseudoStats.SchoolDamageTakenMultiplier[stats.SchoolIndexShadow] /= damageMulti
 		},
-		OnSpellHitDealt: func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
+		OnSpellHitTaken: func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
 			if spell.SpellSchool.Matches(SpellSchoolShadow) && result.Landed() {
 				aura.RemoveStack(sim)
 			}
 		},
 	})
+
+	return aura
 }
 
 func ShadowWeavingAura(unit *Unit, rank int) *Aura {
@@ -250,7 +345,7 @@ func ShadowWeavingAura(unit *Unit, rank int) *Aura {
 	})
 }
 
-func ScheduledMajorArmorAura(aura *Aura, options PeriodicActionOptions, raid *proto.Raid) {
+func ScheduledMajorArmorAura(aura *Aura, options PeriodicActionOptions, _ *proto.Raid) {
 	aura.OnReset = func(aura *Aura, sim *Simulation) {
 		aura.Duration = NeverExpires
 		StartPeriodicAction(sim, options)
@@ -534,7 +629,7 @@ func CurseOfVulnerabilityAura(target *Unit) *Aura {
 	})
 }
 
-func MangleAura(target *Unit, playerLevel int32) *Aura {
+func MangleAura(target *Unit, _ int32) *Aura {
 	return bleedDamageAura(target, Aura{
 		Label:    "Mangle",
 		ActionID: ActionID{SpellID: 409828},
@@ -550,10 +645,10 @@ func bleedDamageAura(target *Unit, config Aura, multiplier float64) *Aura {
 	aura.NewExclusiveEffect(BleedEffectCategory, true, ExclusiveEffect{
 		Priority: multiplier,
 		OnGain: func(ee *ExclusiveEffect, sim *Simulation) {
-			ee.Aura.Unit.PseudoStats.PeriodicPhysicalDamageTakenMultiplier *= multiplier
+			ee.Aura.Unit.PseudoStats.BleedDamageTakenMultiplier *= multiplier
 		},
 		OnExpire: func(ee *ExclusiveEffect, sim *Simulation) {
-			ee.Aura.Unit.PseudoStats.PeriodicPhysicalDamageTakenMultiplier /= multiplier
+			ee.Aura.Unit.PseudoStats.BleedDamageTakenMultiplier /= multiplier
 		},
 	})
 	return aura
@@ -588,11 +683,11 @@ func WintersChillAura(target *Unit, startingStacks int32) *Aura {
 			aura.SetStacks(sim, startingStacks)
 		},
 		OnStacksChange: func(aura *Aura, sim *Simulation, oldStacks, newStacks int32) {
-			aura.Unit.PseudoStats.SchoolCritTakenMultiplier[stats.SchoolIndexFrost] /= 1 + 0.2*float64(oldStacks)
-			aura.Unit.PseudoStats.SchoolCritTakenMultiplier[stats.SchoolIndexFrost] *= 1 + 0.2*float64(newStacks)
+			aura.Unit.PseudoStats.SchoolCritTakenChance[stats.SchoolIndexFrost] -= 0.02 * float64(oldStacks)
+			aura.Unit.PseudoStats.SchoolCritTakenChance[stats.SchoolIndexFrost] += 0.02 * float64(newStacks)
 		},
 		OnExpire: func(aura *Aura, sim *Simulation) {
-			aura.Unit.PseudoStats.SchoolCritTakenMultiplier[stats.SchoolIndexFrost] /= 1 + 0.2*float64(aura.stacks)
+			aura.Unit.PseudoStats.SchoolCritTakenChance[stats.SchoolIndexFrost] -= 0.02 * float64(aura.stacks)
 		},
 	})
 
@@ -685,7 +780,7 @@ func ExposeArmorAura(target *Unit, improvedEA int32, playerLevel int32) *Aura {
 	return aura
 }
 
-func HomunculiAttackSpeedAura(target *Unit, playerLevel int32) *Aura {
+func HomunculiAttackSpeedAura(target *Unit, _ int32) *Aura {
 	multiplier := 1.1
 
 	aura := target.GetOrRegisterAura(Aura{
@@ -810,7 +905,7 @@ func FaerieFireAura(target *Unit, playerLevel int32) *Aura {
 }
 
 // TODO: Classic
-func CurseOfWeaknessAura(target *Unit, points int32, playerLevel int32) *Aura {
+func CurseOfWeaknessAura(target *Unit, points int32, _ int32) *Aura {
 	aura := target.GetOrRegisterAura(Aura{
 		Label:    "Curse of Weakness" + strconv.Itoa(int(points)),
 		ActionID: ActionID{SpellID: 50511},
@@ -859,7 +954,7 @@ func HuntersMarkAura(target *Unit, points int32, playerLevel int32) *Aura {
 }
 
 // TODO: Classic
-func DemoralizingRoarAura(target *Unit, points int32, playerLevel int32) *Aura {
+func DemoralizingRoarAura(target *Unit, points int32, _ int32) *Aura {
 	aura := target.GetOrRegisterAura(Aura{
 		Label:    "DemoralizingRoar-" + strconv.Itoa(int(points)),
 		ActionID: ActionID{SpellID: 9898},
@@ -875,7 +970,7 @@ var DemoralizingShoutSpellId = [DemoralizingShoutRanks + 1]int32{0, 1160, 6190, 
 var DemoralizingShoutBaseAP = [DemoralizingShoutRanks + 1]float64{0, 45, 56, 76, 111, 146}
 var DemoralizingShoutLevel = [DemoralizingShoutRanks + 1]int{0, 14, 24, 34, 44, 54}
 
-func DemoralizingShoutAura(target *Unit, boomingVoicePts int32, impDemoShoutPts int32, playerLevel int32) *Aura {
+func DemoralizingShoutAura(target *Unit, boomingVoicePts int32, impDemoShoutPts int32, _ int32) *Aura {
 	rank := LevelToDebuffRank[DemoralizingShout][target.Level]
 	spellId := DemoralizingShoutSpellId[rank]
 	baseAPReduction := DemoralizingShoutBaseAP[rank]
@@ -890,7 +985,7 @@ func DemoralizingShoutAura(target *Unit, boomingVoicePts int32, impDemoShoutPts 
 }
 
 // TODO: Classic
-func VindicationAura(target *Unit, points int32, playerLevel int32) *Aura {
+func VindicationAura(target *Unit, points int32, _ int32) *Aura {
 	aura := target.GetOrRegisterAura(Aura{
 		Label:    "Vindication",
 		ActionID: ActionID{SpellID: 26016},
@@ -1002,4 +1097,35 @@ func AncientCorrosivePoisonAura(target *Unit) *Aura {
 			aura.Unit.stats[stats.Armor] += 150
 		},
 	})
+}
+
+func SerpentsStrikerFistDebuffAura(target *Unit, playerLevel int32) *Aura {
+	if playerLevel < 50 {
+		return nil
+	}
+
+	spellID := 447894
+	resistance := 60.0
+	dmgMod := 1.08
+
+	aura := target.GetOrRegisterAura(Aura{
+		Label:    "Serpents Striker Debuff",
+		ActionID: ActionID{SpellID: int32(spellID)},
+		Duration: time.Second * 20,
+		OnGain: func(aura *Aura, sim *Simulation) {
+			aura.Unit.AddStatsDynamic(sim, stats.Stats{
+				stats.NatureResistance: -resistance,
+			})
+		},
+		OnExpire: func(aura *Aura, sim *Simulation) {
+			aura.Unit.AddStatsDynamic(sim, stats.Stats{
+				stats.NatureResistance: resistance,
+			})
+		},
+	})
+
+	// 0.01 priority as this overwrites the other spells of this category and does not allow them to be recast
+	spellSchoolDamageEffect(aura, stats.SchoolIndexNature, dmgMod, 0.01, true)
+	spellSchoolDamageEffect(aura, stats.SchoolIndexHoly, dmgMod, 0.01, true)
+	return aura
 }

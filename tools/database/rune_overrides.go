@@ -7,8 +7,23 @@ import (
 // Overrides for runes as needed
 // Regen db with "go run ./tools/database/gen_db -outDir=assets -gen=db"
 // And ensure db files are copied from assets/db into dist/sod/database
-var RuneOverrides = []*proto.UIRune{
-	// {Id: 415460, Name: "Engrave Chest - Burnout", Icon: "ability_mage_burnout", Type: proto.ItemType_ItemTypeChest, Class: proto.Class_ClassMage, RequiresLevel: 1},
-	{Id: 399985, Name: "Engrave Gloves - Shadowstrike", Icon: "ability_rogue_envelopingshadows", Type: proto.ItemType_ItemTypeHands, Class: proto.Class_ClassRogue, RequiresLevel: 1},
-	{Id: 400029, Name: "Engrave Belt - Shadowstep", Icon: "ability_rogue_shadowstep", Type: proto.ItemType_ItemTypeWaist, Class: proto.Class_ClassRogue, RequiresLevel: 30},
+var RuneOverrides []*proto.UIRune
+
+// Remove runes as you implement them.
+var UnimplementedRuneOverrides = []int32{
+	// Hunter
+	415405, // Rapid Killing
+	428717, // T.N.T.
+
+	// Paladin
+	429133, // Improved Sanctuary
+	428909, // Light's Grace
+
+	// Priest
+	431622, // Divine Aegis
+	402789, // Eye of the Void
+	413251, // Pain and Suffering
+	431670, // Despair
+	431664, // Surge of Light
+	431681, // Void Zone
 }

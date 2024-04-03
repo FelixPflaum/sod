@@ -12,11 +12,10 @@ func (warlock *Warlock) registerChaosBoltSpell() {
 	if !warlock.HasRune(proto.WarlockRune_RuneHandsChaosBolt) {
 		return
 	}
+
 	spellCoeff := 0.714
-	level := float64(warlock.GetCharacter().Level)
-	baseCalc := 6.568597 + 0.672028*level + 0.031721*level*level
-	baseLowDamage := baseCalc * 5.22
-	baseHighDamage := baseCalc * 6.62
+	baseLowDamage := warlock.baseRuneAbilityDamage() * 5.22
+	baseHighDamage := warlock.baseRuneAbilityDamage() * 6.62
 
 	warlock.ChaosBolt = warlock.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 403629},
@@ -44,15 +43,15 @@ func (warlock *Warlock) registerChaosBoltSpell() {
 
 		CritDamageBonus: warlock.ruin(),
 
-		DamageMultiplier:         1 + 0.02*float64(warlock.Talents.Emberstorm),
-		DamageMultiplierAdditive: 1,
+		DamageMultiplierAdditive: 1 + 0.02*float64(warlock.Talents.Emberstorm),
+		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			baseDamage := sim.Roll(baseLowDamage, baseHighDamage) + spellCoeff*spell.SpellDamage()
 
 			if warlock.LakeOfFireAuras != nil && warlock.LakeOfFireAuras.Get(target).IsActive() {
-				baseDamage *= 1.4
+				baseDamage *= warlock.getLakeOfFireMultiplier()
 			}
 
 			// Assuming 100% hit for all target levels, numbers could be updated for level comparison later

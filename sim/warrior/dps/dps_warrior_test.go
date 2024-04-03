@@ -59,15 +59,16 @@ func TestArms(t *testing.T) {
 func BenchmarkSimulate(b *testing.B) {
 	core.Each([]*proto.Player{
 		{
-			Race:          proto.Race_RaceOrc,
-			Class:         proto.Class_ClassWarrior,
-			Level:         40,
-			Equipment:     core.GetGearSet("../../../ui/warrior/gear_sets", "phase_2_2h").GearSet,
-			Rotation:      core.GetAplRotation("../../../ui/warrior/apls", "phase_2_arms").Rotation,
-			Consumes:      Phase2Consumes.Consumes,
-			Spec:          PlayerOptionsFury,
-			TalentsString: P2FuryTalents,
-			Buffs:         core.FullIndividualBuffsPhase2,
+			Race:               proto.Race_RaceOrc,
+			Class:              proto.Class_ClassWarrior,
+			Level:              40,
+			Equipment:          core.GetGearSet("../../../ui/warrior/gear_sets", "phase_2_2h").GearSet,
+			Rotation:           core.GetAplRotation("../../../ui/warrior/apls", "phase_2_arms").Rotation,
+			Consumes:           Phase2Consumes.Consumes,
+			Spec:               PlayerOptionsFury,
+			TalentsString:      P2FuryTalents,
+			Buffs:              core.FullIndividualBuffsPhase2,
+			DistanceFromTarget: 0,
 		},
 	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
 }

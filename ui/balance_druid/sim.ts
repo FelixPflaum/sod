@@ -51,13 +51,13 @@ const SPEC_CONFIG = registerSpecConfig(Spec.SpecBalanceDruid, {
 		gear: Presets.DefaultGear.gear,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Stats.fromMap({
-			[Stat.StatIntellect]: 0.17,
+			[Stat.StatIntellect]: 0.16,
 			[Stat.StatSpirit]: 0.0,
 			[Stat.StatSpellPower]: 1,
-			[Stat.StatArcanePower]: 0.67,
-			[Stat.StatNaturePower]: 0.33,
-			[Stat.StatSpellHit]: 8.24,
-			[Stat.StatSpellCrit]: 5.86,
+			[Stat.StatArcanePower]: 0.62,
+			[Stat.StatNaturePower]: 0.38,
+			[Stat.StatSpellHit]: 11.75,
+			[Stat.StatSpellCrit]: 7.5,
 			[Stat.StatSpellHaste]: 0.8,
 			[Stat.StatMP5]: 0.0,
 		}),
@@ -100,10 +100,10 @@ const SPEC_CONFIG = registerSpecConfig(Spec.SpecBalanceDruid, {
 
 	presets: {
 		// Preset talents that the user can quickly select.
-		talents: [...Presets.TalentPresets[Phase.Phase2], ...Presets.TalentPresets[Phase.Phase1]],
-		rotations: [...Presets.APLPresets[Phase.Phase2], ...Presets.APLPresets[Phase.Phase1]],
+		talents: [...Presets.TalentPresets[Phase.Phase3], ...Presets.TalentPresets[Phase.Phase2], ...Presets.TalentPresets[Phase.Phase1]],
+		rotations: [...Presets.APLPresets[Phase.Phase3], ...Presets.APLPresets[Phase.Phase2], ...Presets.APLPresets[Phase.Phase1]],
 		// Preset gear configurations that the user can quickly select.
-		gear: [Presets.GearBlank, ...Presets.GearPresets[Phase.Phase2], ...Presets.GearPresets[Phase.Phase1]],
+		gear: [...Presets.GearPresets[Phase.Phase3], ...Presets.GearPresets[Phase.Phase2], ...Presets.GearPresets[Phase.Phase1]],
 	},
 
 	autoRotation: player => {

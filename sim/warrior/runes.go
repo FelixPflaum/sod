@@ -9,17 +9,16 @@ import (
 )
 
 func (warrior *Warrior) ApplyRunes() {
-	if warrior.GetMHWeapon() != nil && warrior.GetOHWeapon() != nil { // This check is to stop memory dereference error if unarmed
-		if warrior.GetMHWeapon().HandType == proto.HandType_HandTypeMainHand || warrior.GetMHWeapon().HandType == proto.HandType_HandTypeOneHand &&
-			warrior.GetOHWeapon().HandType == proto.HandType_HandTypeOffHand || warrior.GetOHWeapon().HandType == proto.HandType_HandTypeOneHand {
-			warrior.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= core.TernaryFloat64(warrior.HasRune(proto.WarriorRune_RuneSingleMindedFury), 1.1, 1)
-		}
+	if warrior.HasRune(proto.WarriorRune_RuneSingleMindedFury) && warrior.HasMHWeapon() && warrior.HasOHWeapon() {
+		warrior.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.1
 	}
 
-	if warrior.GetMHWeapon() != nil { // This check is to stop memory dereference error if unarmed
-		if warrior.GetMHWeapon().HandType == proto.HandType_HandTypeTwoHand {
-			warrior.PseudoStats.MeleeSpeedMultiplier *= core.TernaryFloat64(warrior.HasRune(proto.WarriorRune_RuneFrenziedAssault), 1.2, 1)
-		}
+	if warrior.HasRune(proto.WarriorRune_RuneFrenziedAssault) && warrior.MainHand().HandType == proto.HandType_HandTypeTwoHand {
+		warrior.PseudoStats.MeleeSpeedMultiplier *= 1.2
+	}
+
+	if warrior.HasRune(proto.WarriorRune_RuneShieldMastery) && warrior.OffHand().WeaponType == proto.WeaponType_WeaponTypeShield {
+		warrior.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.1
 	}
 
 	warrior.FocusedRageDiscount = core.TernaryFloat64(warrior.HasRune(proto.WarriorRune_RuneFocusedRage), 3.0, 0)
@@ -30,9 +29,14 @@ func (warrior *Warrior) ApplyRunes() {
 	warrior.registerQuickStrike()
 	warrior.registerRagingBlow()
 	warrior.applyBloodSurge()
+	warrior.registerRampage()
+	warrior.applyTasteForBlood()
+	warrior.applyWreckingCrew()
+	warrior.applySwordAndBoard()
 
 	// Endless Rage implemented on dps_warrior.go and protection_warrior.go
 	// Precise Timing is implemented on slam.go
+	// Gladiator implemented on stances.go
 
 }
 
@@ -97,10 +101,10 @@ func (warrior *Warrior) applyConsumedByRage() {
 		return
 	}
 
-	warrior.ConsumedByRageAura = warrior.RegisterAura(core.Aura{
-		Label:     "Consumed By Rage",
-		ActionID:  core.ActionID{SpellID: 425418},
-		Duration:  time.Second * 10,
+	warrior.ConsumedByRageAura = warrior.GetOrRegisterAura(core.Aura{
+		Label:     "Enrage 10%",
+		ActionID:  core.ActionID{SpellID: 425415},
+		Duration:  time.Second * 12,
 		MaxStacks: 12,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			warrior.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.1
@@ -114,6 +118,8 @@ func (warrior *Warrior) applyConsumedByRage() {
 			warrior.Above80RageCBRActive = false
 		},
 	})
+
+	warrior.ConsumedByRageAura.NewExclusiveEffect("Enrage", true, core.ExclusiveEffect{Priority: 10})
 
 	warrior.RegisterAura(core.Aura{
 		Label:    "Consumed By Rage Trigger",
@@ -198,4 +204,117 @@ func (warrior *Warrior) applyBloodSurge() {
 			warrior.BloodSurgeAura.Activate(sim)
 		},
 	})
+}
+
+func (warrior *Warrior) applyTasteForBlood() {
+	if !warrior.HasRune(proto.WarriorRune_RuneTasteForBlood) {
+		return
+	}
+
+	icd := core.Cooldown{
+		Timer:    warrior.NewTimer(),
+		Duration: time.Millisecond * 580,
+	}
+
+	warrior.RegisterAura(core.Aura{
+		Label:    "Taste for Blood",
+		Duration: core.NeverExpires,
+		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		},
+		OnPeriodicDamageDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if spell != warrior.Rend {
+				return
+			}
+
+			if !icd.IsReady(sim) {
+				return
+			}
+
+			icd.Use(sim)
+			warrior.OverpowerAura.Duration = time.Second * 9
+			warrior.OverpowerAura.Activate(sim)
+			warrior.OverpowerAura.Duration = time.Second * 5
+		},
+	})
+}
+
+func (warrior *Warrior) applyWreckingCrew() {
+	if !warrior.HasRune(proto.WarriorRune_RuneWreckingCrew) {
+		return
+	}
+
+	warrior.WreckingCrewEnrageAura = warrior.RegisterAura(core.Aura{
+		Label:    "Enrage Wrecking Crew",
+		ActionID: core.ActionID{SpellID: 427066},
+		Duration: time.Second * 6,
+		OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			warrior.PseudoStats.MeleeCritMultiplier *= 1.1
+		},
+		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+			warrior.PseudoStats.MeleeCritMultiplier /= 1.1
+		},
+	})
+
+	warrior.WreckingCrewEnrageAura.NewExclusiveEffect("Enrage", true, core.ExclusiveEffect{Priority: 1})
+
+	warrior.RegisterAura(core.Aura{
+		Label:    "Wrecking Crew",
+		Duration: core.NeverExpires,
+		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		},
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if !spell.ProcMask.Matches(core.ProcMaskMelee) {
+				return
+			}
+
+			if !result.Outcome.Matches(core.OutcomeCrit) {
+				return
+			}
+
+			warrior.WreckingCrewEnrageAura.Activate(sim)
+		},
+	})
+}
+
+func (warrior *Warrior) applySwordAndBoard() {
+	if !warrior.HasRune(proto.WarriorRune_RuneSwordAndBoard) || !warrior.Talents.ShieldSlam {
+		return
+	}
+
+	sabAura := warrior.GetOrRegisterAura(core.Aura{
+		Label:    "Sword And Board",
+		ActionID: core.ActionID{SpellID: int32(proto.WarriorRune_RuneSwordAndBoard)},
+		Duration: 5 * time.Second,
+		OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			warrior.ShieldSlam.CostMultiplier -= 1
+		},
+		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+			warrior.ShieldSlam.CostMultiplier += 1
+		},
+		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+			if spell == warrior.ShieldSlam {
+				aura.Deactivate(sim)
+			}
+		},
+	})
+
+	core.MakePermanent(warrior.GetOrRegisterAura(core.Aura{
+		Label: "Sword And Board Trigger",
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if !result.Landed() {
+				return
+			}
+
+			if spell != warrior.Revenge && spell != warrior.Devastate {
+				return
+			}
+
+			if sim.RandomFloat("Sword And Board") < 0.3 {
+				sabAura.Activate(sim)
+				warrior.ShieldSlam.CD.Reset()
+			}
+		},
+	}))
 }

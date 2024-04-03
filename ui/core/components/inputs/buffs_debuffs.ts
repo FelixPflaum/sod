@@ -270,6 +270,15 @@ export const TrueshotAuraBuff = withLabel(
 	'Trueshot Aura',
 );
 
+export const BattleSquawkBuff = withLabel(
+	makeMultistateRaidBuffInput({
+		actionId: player => player.getMatchingSpellActionId([{ id: 23060, minLevel: 40 }]),
+		numStates: 6,
+		fieldName: 'battleSquawk',
+	}),
+	'Battle Squawk',
+);
+
 // export const AttackPowerPercentBuff = InputHelpers.makeMultiIconInput([
 // ], 'Attack Power %', 1, 40);
 
@@ -564,10 +573,18 @@ export const AshenvalePvpBuff = withLabel(
 
 export const SparkOfInspiration = withLabel(
 	makeBooleanIndividualBuffInput({
-		actionId: () => ActionId.fromSpellId(438536),
+		actionId: player => player.getMatchingSpellActionId([{ id: 438536, maxLevel: 49 }]),
 		fieldName: 'sparkOfInspiration',
 	}),
 	'Spark of Inspiration',
+);
+
+export const FervorOfTheTempleExplorer = withLabel(
+	makeBooleanIndividualBuffInput({
+		actionId: player => player.getMatchingSpellActionId([{ id: 446695, maxLevel: 59 }]),
+		fieldName: 'fervorOfTheTempleExplorer',
+	}),
+	'Fervor Of The Temple Explorer',
 );
 
 ///////////////////////////////////////////////////////////////////////////
@@ -802,8 +819,12 @@ export const JudgementOfWisdom = withLabel(
 
 // Misc Debuffs
 export const MekkatorqueFistDebuff = makeBooleanDebuffInput({
-	actionId: player => player.getMatchingItemActionId([{ id: 213409, minLevel: 40 }]),
+	actionId: player => player.getMatchingItemActionId([{ id: 213409, minLevel: 40, maxLevel: 45 }]),
 	fieldName: 'mekkatorqueFistDebuff',
+});
+export const SerpentsStrikerFistDebuff = makeBooleanDebuffInput({
+	actionId: player => player.getMatchingItemActionId([{ id: 220589, minLevel: 50, maxLevel: 55 }]),
+	fieldName: 'serpentsStrikerFistDebuff',
 });
 export const JudgementOfLight = makeBooleanDebuffInput({
 	actionId: player =>
@@ -979,9 +1000,19 @@ export const RAID_BUFFS_CONFIG = [
 		picker: IconPicker,
 		stats: [Stat.StatMP5, Stat.StatSpellPower],
 	},
+	{
+		config: BattleSquawkBuff,
+		picker: IconPicker,
+		stats: [Stat.StatMeleeHaste],
+	},
 ] as PickerStatOptions[];
 
 export const WORLD_BUFFS_CONFIG = [
+	{
+		config: FervorOfTheTempleExplorer,
+		picker: IconPicker,
+		stats: [Stat.StatSpellPower, Stat.StatAttackPower],
+	},
 	{
 		config: SparkOfInspiration,
 		picker: IconPicker,
@@ -1164,6 +1195,11 @@ export const DEBUFFS_MISC_CONFIG = [
 		config: MekkatorqueFistDebuff,
 		picker: IconPicker,
 		stats: [Stat.StatSpellPower],
+	},
+	{
+		config: SerpentsStrikerFistDebuff,
+		picker: IconPicker,
+		stats: [Stat.StatNaturePower, Stat.StatHolyPower],
 	},
 	{
 		config: CurseOfVulnerability,

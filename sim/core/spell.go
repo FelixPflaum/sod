@@ -75,11 +75,10 @@ type Spell struct {
 	// The unit who will perform this spell.
 	Unit *Unit
 
-	SpellSchool       SpellSchool // Schoolmask of all schools this spell uses. Use Spell.SetSchool() to change this!
+	SpellSchool       SpellSchool         // Schoolmask of all schools this spell uses. Do not change this! Whatever you try to do is a hack and probably wrong.
+	SchoolIndex       stats.SchoolIndex   // Do not change this! Whatever you try to do is a hack and probably wrong.
+	SchoolBaseIndices []stats.SchoolIndex // Base school indices for multi schools. Do not change this! Whatever you try to do is a hack and probably wrong.
 	DefenseType       DefenseType
-	SchoolIndex       stats.SchoolIndex   // Use Spell.SetSchool() to change this!
-	SchoolBaseIndices []stats.SchoolIndex // Base school indices for multi schools. Use Spell.SetSchool() to change this!
-	IsMultischool     bool                // True if school is composed of multiple base schools. Use Spell.SetSchool() to change this!
 
 	// Controls which effects can proc from this spell.
 	ProcMask ProcMask
@@ -93,6 +92,9 @@ type Spell struct {
 	// Speed in yards/second. Spell missile speeds can be found in the game data.
 	// Example: https://wow.tools/dbc/?dbc=spellmisc&build=3.4.0.44996
 	MissileSpeed float64
+
+	Rank          int
+	RequiredLevel int
 
 	ResourceMetrics *ResourceMetrics
 	healthMetrics   []*ResourceMetrics
@@ -222,6 +224,10 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		CastType:     config.CastType,
 		MissileSpeed: config.MissileSpeed,
 
+		SpellSchool:       config.SpellSchool,
+		SchoolIndex:       config.SpellSchool.GetSchoolIndex(),
+		SchoolBaseIndices: config.SpellSchool.GetBaseIndices(),
+
 		DefaultCast:        config.Cast.DefaultCast,
 		CD:                 config.Cast.CD,
 		SharedCD:           config.Cast.SharedCD,
@@ -255,7 +261,8 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		RelatedAuras: config.RelatedAuras,
 	}
 
-	spell.SetSchool(config.SpellSchool.GetSchoolIndex())
+	spell.Rank = config.Rank
+	spell.RequiredLevel = config.RequiredLevel
 
 	spell.CdSpell = spell
 
@@ -488,7 +495,7 @@ func (spell *Spell) CanCast(sim *Simulation, target *Unit) bool {
 	}
 
 	// While moving only instant casts are possible
-	if (spell.DefaultCast.CastTime > 0) && spell.Unit.Moving {
+	if spell.DefaultCast.CastTime > 0 && spell.Unit.Moving {
 		//if sim.Log != nil {
 		//	sim.Log("Cant cast because moving")
 		//}

@@ -1,6 +1,7 @@
 package warlock
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/wowsims/sod/sim/core"
@@ -18,16 +19,23 @@ func (warlock *Warlock) getRainOfFireBaseConfig(rank int) core.SpellConfig {
 	return core.SpellConfig{
 		ActionID:      core.ActionID{SpellID: spellId},
 		SpellSchool:   core.SpellSchoolFire,
+		DefenseType:   core.DefenseTypeMagic,
 		ProcMask:      core.ProcMaskSpellDamage,
 		Flags:         core.SpellFlagChanneled | core.SpellFlagAPL | core.SpellFlagResetAttackSwing,
 		RequiredLevel: level,
 		Rank:          rank,
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
+		BonusCritRating: float64(warlock.Talents.Devastation) * core.SpellCritRatingPerCritChance,
+
+		CritDamageBonus: warlock.ruin(),
+
+		DamageMultiplierAdditive: 1 + 0.02*float64(warlock.Talents.Emberstorm),
+		DamageMultiplier:         1,
+		ThreatMultiplier:         1,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: manaCost,
+			FlatCost:   manaCost,
+			Multiplier: 1 - float64(warlock.Talents.Cataclysm)*0.01,
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -37,7 +45,7 @@ func (warlock *Warlock) getRainOfFireBaseConfig(rank int) core.SpellConfig {
 		Dot: core.DotConfig{
 			IsAOE: true,
 			Aura: core.Aura{
-				Label: "Rain of Fire",
+				Label: "RainOfFire-" + warlock.Label + strconv.Itoa(rank),
 			},
 			NumberOfTicks:       4,
 			TickLength:          time.Second * 2,
@@ -51,32 +59,26 @@ func (warlock *Warlock) getRainOfFireBaseConfig(rank int) core.SpellConfig {
 				for _, aoeTarget := range sim.Encounter.TargetUnits {
 					targetDamage := dot.SnapshotBaseDamage
 					if warlock.LakeOfFireAuras != nil && warlock.LakeOfFireAuras.Get(aoeTarget).IsActive() {
-						targetDamage *= 1.4
+						targetDamage *= warlock.getLakeOfFireMultiplier()
 					}
 					dot.CalcAndDealPeriodicSnapshotDamage(sim, aoeTarget, dot.OutcomeTick)
+
+					if hasRune && dot.TickCount == dot.NumberOfTicks {
+						warlock.LakeOfFireAuras.Get(aoeTarget).Activate(sim)
+					}
 				}
+
 			},
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			for _, aoeTarget := range sim.Encounter.TargetUnits {
-				if warlock.LakeOfFireAuras != nil {
-					warlock.LakeOfFireAuras.Get(aoeTarget).Activate(sim)
-				}
-			}
 			spell.AOEDot().Apply(sim)
-
-			if hasRune {
-				spell.Unit.ChanneledDot.Cancel(sim)
-
-				sim.AddPendingAction(&core.PendingAction{
-					NextActionAt: sim.CurrentTime,
-					Priority:     core.ActionPriorityGCD,
-					OnAction:     spell.Unit.Rotation.DoNextAction,
-				})
-			}
 		},
 	}
+}
+
+func (warlock *Warlock) getLakeOfFireMultiplier() float64 {
+	return 1.5
 }
 
 func (warlock *Warlock) registerRainOfFireSpell() {

@@ -33,14 +33,17 @@ type Warrior struct {
 	WarriorInputs
 
 	// Current state
-	Stance               Stance
-	revengeProcAura      *core.Aura
-	OverpowerAura        *core.Aura
-	BerserkerRageAura    *core.Aura
-	BloodrageAura        *core.Aura
-	ConsumedByRageAura   *core.Aura
-	Above80RageCBRActive bool
-	BloodSurgeAura       *core.Aura
+	Stance                 Stance
+	revengeProcAura        *core.Aura
+	OverpowerAura          *core.Aura
+	BerserkerRageAura      *core.Aura
+	BloodrageAura          *core.Aura
+	ConsumedByRageAura     *core.Aura
+	Above80RageCBRActive   bool
+	BloodSurgeAura         *core.Aura
+	RampageAura            *core.Aura
+	rampageValidAura       *core.Aura
+	WreckingCrewEnrageAura *core.Aura
 
 	// Rune passive
 	FocusedRageDiscount float64
@@ -55,28 +58,29 @@ type Warrior struct {
 	BattleStance    *core.Spell
 	DefensiveStance *core.Spell
 	BerserkerStance *core.Spell
+	GladiatorStance *core.Spell
 
-	Bloodrage            *core.Spell
-	BerserkerRage        *core.Spell
-	Bloodthirst          *core.Spell
-	DemoralizingShout    *core.Spell
-	Devastate            *core.Spell
-	Execute              *core.Spell
-	MortalStrike         *core.Spell
-	Overpower            *core.Spell
-	Rend                 *core.Spell
-	Revenge              *core.Spell
-	ShieldBlock          *core.Spell
-	ShieldSlam           *core.Spell
-	Slam                 *core.Spell
-	SunderArmor          *core.Spell
-	SunderArmorDevastate *core.Spell
-	ThunderClap          *core.Spell
-	Whirlwind            *core.Spell
-	DeepWounds           *core.Spell
-	ConcussionBlow       *core.Spell
-	RagingBlow           *core.Spell
-	Hamstring            *core.Spell
+	Bloodrage         *core.Spell
+	BerserkerRage     *core.Spell
+	Bloodthirst       *core.Spell
+	DemoralizingShout *core.Spell
+	Execute           *core.Spell
+	MortalStrike      *core.Spell
+	Overpower         *core.Spell
+	Rend              *core.Spell
+	Revenge           *core.Spell
+	ShieldBlock       *core.Spell
+	ShieldSlam        *core.Spell
+	Slam              *core.Spell
+	SunderArmor       *core.Spell
+	Devastate         *core.Spell
+	ThunderClap       *core.Spell
+	Whirlwind         *core.Spell
+	DeepWounds        *core.Spell
+	ConcussionBlow    *core.Spell
+	RagingBlow        *core.Spell
+	Hamstring         *core.Spell
+	Rampage           *core.Spell
 
 	HeroicStrike       *core.Spell
 	QuickStrike        *core.Spell
@@ -87,6 +91,7 @@ type Warrior struct {
 	BattleStanceAura    *core.Aura
 	DefensiveStanceAura *core.Aura
 	BerserkerStanceAura *core.Aura
+	GladiatorStanceAura *core.Aura
 
 	ShieldBlockAura *core.Aura
 
@@ -129,8 +134,7 @@ func (warrior *Warrior) Initialize() {
 	warrior.registerRendSpell()
 	warrior.registerHamstringSpell()
 
-	warrior.SunderArmor = warrior.newSunderArmorSpell(false)
-	warrior.SunderArmorDevastate = warrior.newSunderArmorSpell(true)
+	warrior.SunderArmor = warrior.newSunderArmorSpell()
 
 	warrior.registerBloodrageCD()
 }
@@ -151,14 +155,10 @@ func NewWarrior(character *core.Character, talents string, inputs WarriorInputs)
 	warrior.PseudoStats.CanParry = true
 
 	warrior.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritPerAgiAtLevel[character.Class][int(warrior.Level)]*core.CritRatingPerCritChance)
-	warrior.AddStatDependency(stats.Agility, stats.Dodge, core.DodgeRatingPerDodgeChance/84.746)
+	warrior.AddStatDependency(stats.Agility, stats.Dodge, core.DodgePerAgiAtLevel[character.Class][int(warrior.Level)])
 	warrior.AddStatDependency(stats.Strength, stats.AttackPower, 2)
-	warrior.AddStatDependency(stats.Strength, stats.BlockValue, .5) // 50% block from str
+	warrior.AddStatDependency(stats.Strength, stats.BlockValue, .05) // 20 str = 1 block
 	warrior.AddStatDependency(stats.BonusArmor, stats.Armor, 1)
-
-	// Base dodge unaffected by Diminishing Returns
-	warrior.PseudoStats.BaseDodge += 0.03664
-	warrior.PseudoStats.BaseParry += 0.05
 
 	return warrior
 }

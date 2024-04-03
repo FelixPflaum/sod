@@ -10,10 +10,11 @@ import (
 )
 
 func (shaman *Shaman) ApplyRunes() {
+	// Helm
+	shaman.applyMentalDexterity()
+
 	// Chest
 	shaman.applyDualWieldSpec()
-	// shaman.applyHealingRain()
-	// shaman.applyOverload()
 	shaman.applyShieldMastery()
 	shaman.applyTwoHandedMastery()
 
@@ -29,14 +30,51 @@ func (shaman *Shaman) ApplyRunes() {
 
 	// Legs
 	shaman.applyAncestralGuidance()
-	// shaman.applyEarthShield()
 	shaman.applyShamanisticRage()
 	shaman.applyWayOfEarth()
 
 	// Feet
 	shaman.applyAncestralAwakening()
-	// shaman.applyDecoyTotem()
 	shaman.applySpiritOfTheAlpha()
+}
+
+func (shaman *Shaman) applyMentalDexterity() {
+	if !shaman.HasRune(proto.ShamanRune_RuneHelmMentalDexterity) {
+		return
+	}
+
+	intToApStatDep := shaman.NewDynamicStatDependency(stats.Intellect, stats.AttackPower, 1.0)
+	apToSpStatDep := shaman.NewDynamicStatDependency(stats.AttackPower, stats.SpellPower, .30)
+
+	procAura := shaman.RegisterAura(core.Aura{
+		Label:    "Mental Dexterity Proc",
+		ActionID: core.ActionID{SpellID: int32(proto.ShamanRune_RuneHelmMentalDexterity)},
+		Duration: time.Second * 60,
+		OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Unit.EnableDynamicStatDep(sim, intToApStatDep)
+			aura.Unit.EnableDynamicStatDep(sim, apToSpStatDep)
+		},
+		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Unit.DisableDynamicStatDep(sim, intToApStatDep)
+			aura.Unit.DisableDynamicStatDep(sim, apToSpStatDep)
+		},
+	})
+
+	// Hidden Aura
+	shaman.RegisterAura(core.Aura{
+		Label:    "MentalDexterity",
+		Duration: core.NeverExpires,
+		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		},
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if !result.Landed() || !spell.ProcMask.Matches(core.ProcMaskMelee) {
+				return
+			}
+
+			procAura.Activate(sim)
+		},
+	})
 }
 
 func (shaman *Shaman) applyDualWieldSpec() {
@@ -100,7 +138,7 @@ func (shaman *Shaman) applyShieldMastery() {
 }
 
 func (shaman *Shaman) applyTwoHandedMastery() {
-	if !shaman.HasRune(proto.ShamanRune_RuneTwoHandedMastery) {
+	if !shaman.HasRune(proto.ShamanRune_RuneChestTwoHandedMastery) {
 		return
 	}
 
@@ -109,7 +147,7 @@ func (shaman *Shaman) applyTwoHandedMastery() {
 	// Two-handed mastery gives +10% AP, +30% attack speed, and +10% spell hit
 	attackSpeedMultiplier := 1.3
 	apMultiplier := 1.1
-	spellHitIncrease := float64(core.SpellHitRatingPerHitChance * 10)
+	spellHitIncrease := core.SpellHitRatingPerHitChance * 10.0
 
 	statDep := shaman.NewDynamicMultiplyStat(stats.AttackPower, apMultiplier)
 	procAura := shaman.RegisterAura(core.Aura{
@@ -130,7 +168,7 @@ func (shaman *Shaman) applyTwoHandedMastery() {
 
 	shaman.RegisterAura(core.Aura{
 		Label:    "Two-Handed Mastery",
-		ActionID: core.ActionID{SpellID: int32(proto.ShamanRune_RuneTwoHandedMastery)},
+		ActionID: core.ActionID{SpellID: int32(proto.ShamanRune_RuneChestTwoHandedMastery)},
 		Duration: core.NeverExpires,
 		OnReset: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Activate(sim)
@@ -277,9 +315,12 @@ func (shaman *Shaman) applyWayOfEarth() {
 		return
 	}
 
-	if shaman.Consumes.MainHandImbue == proto.WeaponImbue_RockbiterWeapon {
-		shaman.PseudoStats.ThreatMultiplier *= 1.5
+	// Way of Earth only activates if you have Rockbiter Weapon on your mainhand and a shield in your offhand
+	if shaman.Consumes.MainHandImbue != proto.WeaponImbue_RockbiterWeapon && (shaman.OffHand() == nil || shaman.OffHand().WeaponType != proto.WeaponType_WeaponTypeShield) {
+		return
 	}
+
+	healthDep := shaman.NewDynamicMultiplyStat(stats.Health, 1.3)
 
 	shaman.RegisterAura(core.Aura{
 		Label:    "Way of Earth",
@@ -288,15 +329,58 @@ func (shaman *Shaman) applyWayOfEarth() {
 		OnReset: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Activate(sim)
 		},
+		OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			shaman.EnableDynamicStatDep(sim, healthDep)
+			shaman.PseudoStats.DamageTakenMultiplier *= .9
+			shaman.PseudoStats.ReducedCritTakenChance += 6
+			shaman.PseudoStats.ThreatMultiplier *= 1.5
+		},
+		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+			shaman.DisableDynamicStatDep(sim, healthDep)
+			shaman.PseudoStats.DamageTakenMultiplier /= .9
+			shaman.PseudoStats.ReducedCritTakenChance -= 6
+			shaman.PseudoStats.ThreatMultiplier /= 1.5
+		},
 	})
 }
 
+// https://www.wowhead.com/classic/spell=408696/spirit-of-the-alpha
 func (shaman *Shaman) applySpiritOfTheAlpha() {
 	if !shaman.HasRune(proto.ShamanRune_RuneFeetSpiritOfTheAlpha) {
 		return
 	}
 
-	// Spirit of the Alpha currently gives +20% AP when used on another target.
-	// Assume this as a default
-	shaman.MultiplyStat(stats.AttackPower, 1.2)
+	if shaman.IsTanking() {
+		shaman.RegisterAura(core.Aura{
+			Label:    "Spirit of the Alpha",
+			ActionID: core.ActionID{SpellID: int32(proto.ShamanRune_RuneFeetSpiritOfTheAlpha)},
+			Duration: core.NeverExpires,
+			OnReset: func(aura *core.Aura, sim *core.Simulation) {
+				aura.Activate(sim)
+			},
+			OnGain: func(aura *core.Aura, sim *core.Simulation) {
+				shaman.PseudoStats.ThreatMultiplier *= 1.45
+			},
+			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+				shaman.PseudoStats.ThreatMultiplier /= 1.45
+			},
+		})
+	} else {
+		shaman.RegisterAura(core.Aura{
+			Label:    "Loyal Beta",
+			ActionID: core.ActionID{SpellID: 443320},
+			Duration: core.NeverExpires,
+			OnReset: func(aura *core.Aura, sim *core.Simulation) {
+				aura.Activate(sim)
+			},
+			OnGain: func(aura *core.Aura, sim *core.Simulation) {
+				shaman.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.05
+				shaman.PseudoStats.ThreatMultiplier *= .70
+			},
+			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+				shaman.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] /= 1.05
+				shaman.PseudoStats.ThreatMultiplier /= .70
+			},
+		})
+	}
 }

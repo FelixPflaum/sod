@@ -23,7 +23,7 @@ func (paladin *Paladin) ApplyTalents() {
 	if paladin.Talents.ShieldSpecialization > 0 {
 		paladin.MultiplyStat(stats.BlockValue, 1.0+0.1*float64(paladin.Talents.ShieldSpecialization))
 	}
-	paladin.PseudoStats.BaseParry += 0.1 * float64(paladin.Talents.Deflection)
+	paladin.AddStat(stats.Parry, 1*float64(paladin.Talents.Deflection))
 
 	paladin.applyWeaponSpecialization()
 	if paladin.Talents.Vengeance > 0 {
@@ -49,7 +49,7 @@ func (paladin *Paladin) getIlluminationActionID() core.ActionID {
 	}
 }
 
-func (paladin *Paladin) getBonusCritChanceFromHolyPower() float64 {
+func (paladin *Paladin) holyPowerCritChance() float64 {
 	return core.CritRatingPerCritChance * float64(paladin.Talents.HolyPower)
 }
 

@@ -23,6 +23,7 @@ import { MultiIconPicker, MultiIconPickerItemConfig } from '../multi_icon_picker
 import { NumberPicker } from '../number_picker';
 import { SavedDataManager } from '../saved_data_manager';
 import { SimTab } from '../sim_tab';
+import { IsbConfig } from './../other_inputs';
 import { ConsumesPicker } from './consumes_picker';
 import { PresetBuildsPicker } from './preset_builds_picker';
 
@@ -68,20 +69,20 @@ export class SettingsTab extends SimTab {
 			this.buildEncounterSettings();
 		}
 
-		this.buildPlayerSettings();
-		this.buildCustomSettingsSections();
-		this.buildConsumesSection();
-		this.buildOtherSettings();
+		this.simUI.sim.waitForInit().then(() => {
+			this.buildPlayerSettings();
+			this.buildCustomSettingsSections();
+			this.buildConsumesSection();
+			this.buildOtherSettings();
+			this.buildIsbSettings();
 
-		if (!this.simUI.isWithinRaidSim) {
-			this.buildBuffsSettings();
-			this.buildWorldBuffsSettings();
-			this.buildDebuffsSettings();
-			this.buildSavedDataPickers();
-		}
-
-		// Force an event so that the pickers update state
-		this.simUI.player.buffsChangeEmitter.emit(TypedEvent.nextEventID());
+			if (!this.simUI.isWithinRaidSim) {
+				this.buildBuffsSettings();
+				this.buildWorldBuffsSettings();
+				this.buildDebuffsSettings();
+				this.buildSavedDataPickers();
+			}
+		});
 	}
 
 	private buildEncounterSettings() {
@@ -211,6 +212,27 @@ export class SettingsTab extends SimTab {
 			if (itemSwapConfig?.itemSlots.length) {
 				new ItemSwapPicker(contentBlock.bodyElement, this.simUI, this.simUI.player, itemSwapConfig);
 			}
+		}
+	}
+
+	private buildIsbSettings() {
+		if (!this.simUI.isWithinRaidSim) {
+			const contentBlock = new ContentBlock(this.column1, 'other-settings', {
+				header: { title: 'Improved Shadow Bolt' },
+			});
+	
+			this.configureInputSection(contentBlock.bodyElement, IsbConfig);
+
+			TypedEvent.onAny([this.simUI.player.talentsChangeEmitter, this.simUI.player.getRaid()!.debuffsChangeEmitter]).on(() => {
+				const isWlAndIsb = (this.simUI.player as Player<Spec.SpecWarlock>)?.getTalents().improvedShadowBolt > 0
+				const isTankWlAndIsb = (this.simUI.player as Player<Spec.SpecTankWarlock>)?.getTalents().improvedShadowBolt > 0
+				const externalIsb = this.simUI.player.getRaid()?.getDebuffs()?.improvedShadowBolt == true
+				if (externalIsb || isWlAndIsb || isTankWlAndIsb) {
+					contentBlock.rootElem.classList.remove('hide');
+				} else {
+					contentBlock.rootElem.classList.add('hide');
+				}
+			});
 		}
 	}
 

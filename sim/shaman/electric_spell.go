@@ -50,6 +50,11 @@ func (shaman *Shaman) newElectricSpellConfig(actionID core.ActionID, baseCost fl
 			},
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				spell.SetMetricsSplit(shaman.MaelstromWeaponAura.GetStacks())
+				castTime := shaman.ApplyCastSpeedForSpell(cast.CastTime, spell)
+
+				if castTime > 0 {
+					shaman.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime+castTime, false)
+				}
 			},
 		},
 
@@ -59,7 +64,7 @@ func (shaman *Shaman) newElectricSpellConfig(actionID core.ActionID, baseCost fl
 
 		CritDamageBonus: shaman.elementalFury(),
 
-		DamageMultiplier: shaman.ConcussionMultiplier(),
+		DamageMultiplier: shaman.concussionMultiplier(),
 		ThreatMultiplier: 1,
 	}
 

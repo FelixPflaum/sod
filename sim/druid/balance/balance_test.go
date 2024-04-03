@@ -48,6 +48,22 @@ func TestBalance(t *testing.T) {
 			EPReferenceStat: proto.Stat_StatSpellPower,
 			StatsToWeigh:    Stats,
 		},
+		{
+			Class:       proto.Class_ClassDruid,
+			Level:       50,
+			Race:        proto.Race_RaceTauren,
+			OtherRaces:  []proto.Race{proto.Race_RaceNightElf},
+			Talents:     Phase3Talents,
+			GearSet:     core.GetGearSet("../../../ui/balance_druid/gear_sets", "phase_3"),
+			Rotation:    core.GetAplRotation("../../../ui/balance_druid/apls", "phase_3"),
+			Buffs:       core.FullBuffsPhase3,
+			Consumes:    Phase3Consumes,
+			SpecOptions: core.SpecOptionsCombo{Label: "Default", SpecOptions: PlayerOptionsAdaptive},
+
+			ItemFilter:      ItemFilters,
+			EPReferenceStat: proto.Stat_StatSpellPower,
+			StatsToWeigh:    Stats,
+		},
 	}))
 }
 
@@ -69,6 +85,7 @@ func BenchmarkSimulate(b *testing.B) {
 
 var Phase1Talents = "50005003021"
 var Phase2Talents = "5000500302541051"
+var Phase3Talents = "5000550012551351--3"
 
 var Phase1Consumes = core.ConsumesCombo{
 	Label: "Phase 1 Consumes",
@@ -86,6 +103,18 @@ var Phase2Consumes = core.ConsumesCombo{
 		Food:           proto.Food_FoodSagefishDelight,
 		MainHandImbue:  proto.WeaponImbue_LesserWizardOil,
 		SpellPowerBuff: proto.SpellPowerBuff_LesserArcaneElixir,
+	},
+}
+
+var Phase3Consumes = core.ConsumesCombo{
+	Label: "Phase 3 Consumes",
+	Consumes: &proto.Consumes{
+		DefaultAtalAi:   proto.AtalAi_AtalAiForbiddenMagic,
+		DefaultConjured: proto.Conjured_ConjuredDruidCatnip,
+		DefaultPotion:   proto.Potions_MajorManaPotion,
+		Food:            proto.Food_FoodRunnTumTuberSurprise,
+		MainHandImbue:   proto.WeaponImbue_WizardOil,
+		SpellPowerBuff:  proto.SpellPowerBuff_GreaterArcaneElixir,
 	},
 }
 

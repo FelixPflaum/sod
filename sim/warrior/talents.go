@@ -15,8 +15,8 @@ func (warrior *Warrior) ToughnessArmorMultiplier() float64 {
 func (warrior *Warrior) ApplyTalents() {
 	warrior.AddStat(stats.MeleeCrit, core.CritRatingPerCritChance*1*float64(warrior.Talents.Cruelty))
 	warrior.ApplyEquipScaling(stats.Armor, warrior.ToughnessArmorMultiplier())
-	warrior.PseudoStats.BaseDodge += 0.01 * float64(warrior.Talents.Anticipation)
-	warrior.PseudoStats.BaseParry += 0.01 * float64(warrior.Talents.Deflection)
+	warrior.AddStat(stats.Defense, 2*float64(warrior.Talents.Anticipation))
+	warrior.AddStat(stats.Parry, 1*float64(warrior.Talents.Deflection))
 	warrior.AutoAttacks.OHConfig().DamageMultiplier *= 1 + 0.05*float64(warrior.Talents.DualWieldSpecialization)
 
 	warrior.applyAngerManagement()
@@ -99,10 +99,31 @@ func (warrior *Warrior) applyWeaponSpecializations() {
 			})
 		}
 	}
+
+	if ps := warrior.Talents.PolearmSpecialization; ps > 0 {
+		// the default character panel displays critical strike chance for main hand only
+		switch warrior.GetProcMaskForTypes(proto.WeaponType_WeaponTypePolearm) {
+		case core.ProcMaskMelee:
+			warrior.AddStat(stats.MeleeCrit, 1*core.CritRatingPerCritChance*float64(ps))
+		case core.ProcMaskMeleeMH:
+			warrior.AddStat(stats.MeleeCrit, 1*core.CritRatingPerCritChance*float64(ps))
+			warrior.OnSpellRegistered(func(spell *core.Spell) {
+				if spell.ProcMask.Matches(core.ProcMaskMeleeOH) {
+					spell.BonusCritRating -= 1 * core.CritRatingPerCritChance * float64(ps)
+				}
+			})
+		case core.ProcMaskMeleeOH:
+			warrior.OnSpellRegistered(func(spell *core.Spell) {
+				if spell.ProcMask.Matches(core.ProcMaskMeleeOH) {
+					spell.BonusCritRating += 1 * core.CritRatingPerCritChance * float64(ps)
+				}
+			})
+		}
+	}
+
 }
 
 func (warrior *Warrior) registerSwordSpecialization(procMask core.ProcMask) {
-	var swordSpecializationSpell *core.Spell
 	icd := core.Cooldown{
 		Timer:    warrior.NewTimer(),
 		Duration: time.Millisecond * 200,
@@ -112,11 +133,6 @@ func (warrior *Warrior) registerSwordSpecialization(procMask core.ProcMask) {
 	warrior.RegisterAura(core.Aura{
 		Label:    "Sword Specialization",
 		Duration: core.NeverExpires,
-		OnInit: func(aura *core.Aura, sim *core.Simulation) {
-			config := *warrior.AutoAttacks.MHConfig()
-			config.ActionID = core.ActionID{SpellID: 12281}
-			swordSpecializationSpell = warrior.GetOrRegisterSpell(config)
-		},
 		OnReset: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Activate(sim)
 		},
@@ -132,7 +148,7 @@ func (warrior *Warrior) registerSwordSpecialization(procMask core.ProcMask) {
 			}
 			if sim.RandomFloat("Sword Specialization") < procChance {
 				icd.Use(sim)
-				aura.Unit.AutoAttacks.MaybeReplaceMHSwing(sim, swordSpecializationSpell).Cast(sim, result.Target)
+				warrior.AutoAttacks.ExtraMHAttack(sim)
 			}
 		},
 	})
@@ -319,7 +335,7 @@ func (warrior *Warrior) registerLastStandCD() {
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(DefensiveStance)
+			return warrior.StanceMatches(DefensiveStance) || warrior.StanceMatches(GladiatorStance)
 		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {

@@ -1,6 +1,7 @@
 package druid
 
 import (
+	"github.com/wowsims/sod/sim/common/sod"
 	"github.com/wowsims/sod/sim/core"
 	"github.com/wowsims/sod/sim/core/proto"
 	"github.com/wowsims/sod/sim/core/stats"
@@ -29,32 +30,31 @@ func (druid *Druid) InForm(form DruidForm) bool {
 	return druid.form.Matches(form)
 }
 
-func (druid *Druid) ClearForm(sim *core.Simulation) {
-	if druid.InForm(Cat) {
-		druid.CatFormAura.Deactivate(sim)
-	} else if druid.InForm(Bear) {
-		druid.BearFormAura.Deactivate(sim)
-	} else if druid.InForm(Moonkin) {
-		druid.MoonkinFormAura.Deactivate(sim)
-	}
-	druid.form = Humanoid
-	druid.SetCurrentPowerBar(core.ManaBar)
-}
-
 // TODO: don't hardcode numbers
 func (druid *Druid) GetCatWeapon(level int32) core.Weapon {
 	// Level 25 values
 	claws := core.Weapon{
-		BaseDamageMin:        16.3866,
-		BaseDamageMax:        24.5799,
+		BaseDamageMin:        0,
+		BaseDamageMax:        0,
 		SwingSpeed:           1.0,
 		NormalizedSwingSpeed: 1.0,
 		AttackPowerPerDPS:    core.DefaultAttackPowerPerDPS,
 	}
 
-	if level == 40 {
+	switch level {
+	case 60:
+		// TODO: Level 60 values
+	case 50:
+		// TODO: Not entirely verified. Value from Balor (Feral mod)
+		// Avg: 46.6
+		claws.BaseDamageMin = 37.28
+		claws.BaseDamageMax = 55.92
+	case 40:
 		claws.BaseDamageMin = 27.80305996
 		claws.BaseDamageMax = 41.70460054
+	default: // 25
+		claws.BaseDamageMin = 16.3866
+		claws.BaseDamageMax = 24.5799
 	}
 
 	return claws
@@ -134,7 +134,7 @@ func (druid *Druid) registerCatFormSpell() {
 		BuildPhase: core.Ternary(druid.StartingForm.Matches(Cat), core.CharacterBuildPhaseBase, core.CharacterBuildPhaseNone),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			if !druid.Env.MeasuringStats && druid.form != Humanoid {
-				druid.ClearForm(sim)
+				druid.CancelShapeshift(sim)
 			}
 			druid.form = Cat
 			druid.SetCurrentPowerBar(core.EnergyBar)
@@ -142,8 +142,8 @@ func (druid *Druid) registerCatFormSpell() {
 			druid.AutoAttacks.SetMH(clawWeapon)
 
 			druid.PseudoStats.ThreatMultiplier *= 0.71
-			druid.PseudoStats.BaseDodge += 0.02 * float64(druid.Talents.FelineSwiftness)
-			druid.PseudoStats.Shapeshifted = true
+			druid.AddStatDynamic(sim, stats.Dodge, 2*float64(druid.Talents.FelineSwiftness))
+			druid.SetShapeshift(aura)
 
 			predBonus = druid.GetDynamicPredStrikeStats()
 			druid.AddStatsDynamic(sim, predBonus)
@@ -172,12 +172,15 @@ func (druid *Druid) registerCatFormSpell() {
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			druid.form = Humanoid
+			druid.SetCurrentPowerBar(core.ManaBar)
+
+			druid.TigersFuryAura.Deactivate(sim)
 
 			druid.AutoAttacks.SetMH(druid.WeaponFromMainHand())
 
 			druid.PseudoStats.ThreatMultiplier /= 0.71
-			druid.PseudoStats.BaseDodge -= 0.02 * float64(druid.Talents.FelineSwiftness)
-			druid.PseudoStats.Shapeshifted = false
+			druid.AddStatDynamic(sim, stats.Dodge, -2*float64(druid.Talents.FelineSwiftness))
+			druid.SetShapeshift(nil)
 
 			druid.AddStatsDynamic(sim, predBonus.Invert())
 			druid.AddStatsDynamic(sim, statBonus.Invert())
@@ -209,6 +212,13 @@ func (druid *Druid) registerCatFormSpell() {
 
 	energyMetrics := druid.NewEnergyMetrics(actionID)
 
+	furorProcChance := 0.2 * float64(druid.Talents.Furor)
+
+	hasWolfheadBonus := false
+	if head := druid.Equipment.Head(); head != nil && (head.ID == WolfsheadHelm || head.Enchant.EffectID == sod.WolfsheadTrophy) {
+		hasWolfheadBonus = true
+	}
+
 	druid.CatForm = druid.RegisterSpell(Any, core.SpellConfig{
 		ActionID: actionID,
 		Flags:    core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
@@ -222,19 +232,31 @@ func (druid *Druid) registerCatFormSpell() {
 				GCD: core.GCDDefault,
 			},
 			IgnoreHaste: true,
+			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
+				if druid.CatFormAura.IsActive() {
+					cast.GCD = 0
+					spell.CostMultiplier -= 1
+				}
+			},
 		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			maxShiftEnergy := core.TernaryFloat64(sim.RandomFloat("Furor") < 0.2*float64(druid.Talents.Furor), 40, 0)
-			energyDelta := maxShiftEnergy - druid.CurrentEnergy()
-
-			if energyDelta > 0 {
-				druid.AddEnergy(sim, energyDelta, energyMetrics)
+			if druid.CatFormAura.IsActive() {
+				druid.CancelShapeshift(sim)
+				spell.CostMultiplier += 1
 			} else {
-				druid.SpendEnergy(sim, -energyDelta, energyMetrics)
-			}
+				maxShiftEnergy := core.TernaryFloat64(sim.RandomFloat("Furor") < furorProcChance, 40, 0)
+				maxShiftEnergy = core.TernaryFloat64(hasWolfheadBonus, maxShiftEnergy+20, maxShiftEnergy)
+				energyDelta := maxShiftEnergy - druid.CurrentEnergy()
 
-			druid.CatFormAura.Activate(sim)
+				if energyDelta > 0 {
+					druid.AddEnergy(sim, energyDelta, energyMetrics)
+				} else {
+					druid.SpendEnergy(sim, -energyDelta, energyMetrics)
+				}
+
+				druid.CatFormAura.Activate(sim)
+			}
 		},
 	})
 }
@@ -271,7 +293,7 @@ func (druid *Druid) registerCatFormSpell() {
 // 		BuildPhase: core.Ternary(druid.StartingForm.Matches(Bear), core.CharacterBuildPhaseBase, core.CharacterBuildPhaseNone),
 // 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 // 			if !druid.Env.MeasuringStats && druid.form != Humanoid {
-// 				druid.ClearForm(sim)
+// 				druid.CancelShapeshift(sim)
 // 			}
 // 			druid.form = Bear
 // 			druid.SetCurrentPowerBar(core.RageBar)
@@ -281,6 +303,7 @@ func (druid *Druid) registerCatFormSpell() {
 // 			druid.PseudoStats.ThreatMultiplier *= 2.1021
 // 			druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.0 + 0.02*float64(druid.Talents.MasterShapeshifter)
 // 			druid.PseudoStats.DamageTakenMultiplier *= potpdtm
+//			Switch to using AddStat as PseudoStat is being removed
 // 			druid.PseudoStats.BaseDodge += 0.02 * float64(druid.Talents.FeralSwiftness+druid.Talents.NaturalReaction)
 
 // 			predBonus = druid.GetDynamicPredStrikeStats()
@@ -314,6 +337,7 @@ func (druid *Druid) registerCatFormSpell() {
 // 			druid.PseudoStats.ThreatMultiplier /= 2.1021
 // 			druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] /= 1.0 + 0.02*float64(druid.Talents.MasterShapeshifter)
 // 			druid.PseudoStats.DamageTakenMultiplier /= potpdtm
+//			Switch to using AddStat as PseudoStat is being removed
 // 			druid.PseudoStats.BaseDodge -= 0.02 * float64(druid.Talents.FeralSwiftness+druid.Talents.NaturalReaction)
 
 // 			druid.AddStatsDynamic(sim, predBonus.Invert())
@@ -409,7 +433,7 @@ func (druid *Druid) registerMoonkinFormSpell() {
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			if !druid.Env.MeasuringStats && druid.form != Humanoid {
-				druid.ClearForm(sim)
+				druid.CancelShapeshift(sim)
 			}
 			druid.form = Moonkin
 

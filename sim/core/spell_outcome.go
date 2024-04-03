@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	"github.com/wowsims/sod/sim/core/stats"
 )
 
@@ -47,6 +48,17 @@ func (dot *Dot) OutcomeTickSnapshotCrit(sim *Simulation, result *SpellResult, at
 	} else {
 		result.Outcome = OutcomeHit
 	}
+}
+
+func (dot *Dot) OutcomeTickSnapshotCritCounted(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	if sim.RandomFloat("Snapshot Crit Roll") < dot.SnapshotCritChance {
+		result.Outcome = OutcomeCrit
+		result.Damage *= dot.Spell.CritMultiplier(attackTable)
+		dot.Spell.SpellMetrics[result.Target.UnitIndex].Crits++
+	} else {
+		result.Outcome = OutcomeHit
+	}
+	dot.Spell.SpellMetrics[result.Target.UnitIndex].Hits++
 }
 
 func (dot *Dot) OutcomeSnapshotCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
@@ -414,11 +426,7 @@ func (result *SpellResult) applyAttackTableBlock(spell *Spell, attackTable *Atta
 }
 
 func (result *SpellResult) applyAttackTableDodge(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
-	if spell.Flags.Matches(SpellFlagCannotBeDodged) {
-		return false
-	}
-
-	*chance += max(0, attackTable.BaseDodgeChance-spell.ExpertisePercentage()-spell.Unit.PseudoStats.DodgeReduction)
+	*chance += max(0, attackTable.BaseDodgeChance)
 
 	if roll < *chance {
 		result.Outcome = OutcomeDodge
@@ -430,7 +438,7 @@ func (result *SpellResult) applyAttackTableDodge(spell *Spell, attackTable *Atta
 }
 
 func (result *SpellResult) applyAttackTableParry(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
-	*chance += max(0, attackTable.BaseParryChance-spell.ExpertisePercentage())
+	*chance += max(0, attackTable.BaseParryChance)
 
 	if roll < *chance {
 		result.Outcome = OutcomeParry
@@ -490,7 +498,8 @@ func (result *SpellResult) applyAttackTableHit(spell *Spell) {
 }
 
 func (result *SpellResult) applyEnemyAttackTableMiss(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
-	missChance := attackTable.BaseMissChance + spell.Unit.PseudoStats.IncreasedMissChance + result.Target.GetDiminishedMissChance()
+	missChance := attackTable.BaseMissChance + spell.Unit.PseudoStats.IncreasedMissChance +
+		result.Target.stats[stats.Defense]*DefenseRatingToChanceReduction
 	if spell.Unit.AutoAttacks.IsDualWielding && !spell.Unit.PseudoStats.DisableDWMissPenalty {
 		missChance += 0.19
 	}
@@ -530,9 +539,8 @@ func (result *SpellResult) applyEnemyAttackTableDodge(spell *Spell, attackTable 
 	}
 
 	dodgeChance := attackTable.BaseDodgeChance +
-		result.Target.PseudoStats.BaseDodge +
-		result.Target.GetDiminishedDodgeChance() -
-		spell.Unit.PseudoStats.DodgeReduction
+		result.Target.GetStat(stats.Dodge)/100 +
+		result.Target.stats[stats.Defense]*DefenseRatingToChanceReduction
 	*chance += max(0, dodgeChance)
 
 	if roll < *chance {
@@ -550,8 +558,8 @@ func (result *SpellResult) applyEnemyAttackTableParry(spell *Spell, attackTable 
 	}
 
 	parryChance := attackTable.BaseParryChance +
-		result.Target.PseudoStats.BaseParry +
-		result.Target.GetDiminishedParryChance()
+		result.Target.GetStat(stats.Parry)/100 +
+		result.Target.stats[stats.Defense]*DefenseRatingToChanceReduction
 	*chance += max(0, parryChance)
 
 	if roll < *chance {
@@ -563,19 +571,18 @@ func (result *SpellResult) applyEnemyAttackTableParry(spell *Spell, attackTable 
 	return false
 }
 
-func (result *SpellResult) applyEnemyAttackTableCrit(spell *Spell, _ *AttackTable, roll float64, chance *float64) bool {
-	critRating := spell.Unit.stats[stats.MeleeCrit] + spell.BonusCritRating
-	critChance := critRating / (CritRatingPerCritChance * 100)
+func (result *SpellResult) applyEnemyAttackTableCrit(spell *Spell, at *AttackTable, roll float64, chance *float64) bool {
+	// "Base Melee Crit" is set as part of AttackTable
+	critChance := at.BaseCritChance + spell.BonusCritRating/100
+	// Crit reduction from bonus Defense of target (Talent, Gear, etc)
 	critChance -= result.Target.stats[stats.Defense] * DefenseRatingToChanceReduction
-	critChance -= result.Target.stats[stats.Resilience] / ResilienceRatingPerCritReductionChance / 100
+	// Crit chance reduction (Rune: Just a Flesh Wound, etc)
 	critChance -= result.Target.PseudoStats.ReducedCritTakenChance
 	*chance += max(0, critChance)
 
 	if roll < *chance {
 		result.Outcome = OutcomeCrit
 		spell.SpellMetrics[result.Target.UnitIndex].Crits++
-		// Assume PvE enemies do not use damage reduction multiplier component in WotLK
-		//resilCritMultiplier := 1 - result.Target.stats[stats.Resilience]/ResilienceRatingPerCritDamageReductionPercent/100
 		result.Damage *= 2
 		return true
 	}
@@ -627,6 +634,6 @@ func (spell *Spell) CritMultiplier(at *AttackTable) float64 {
 	case DefenseTypeMagic:
 		return 1 + (1.5*at.CritMultiplier-1)*spell.CritDamageBonus
 	default:
-		return 1 + (2.0*at.CritMultiplier-1)*spell.CritDamageBonus
+		return 1 + (2.0*at.CritMultiplier*at.Attacker.PseudoStats.MeleeCritMultiplier-1)*spell.CritDamageBonus
 	}
 }

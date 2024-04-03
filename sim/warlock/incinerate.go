@@ -13,11 +13,8 @@ func (warlock *Warlock) registerIncinerateSpell() {
 		return
 	}
 	spellCoeff := 0.714
-
-	level := float64(warlock.GetCharacter().Level)
-	baseCalc := (6.568597 + 0.672028*level + 0.031721*level*level)
-	baseLowDamage := baseCalc * 2.22
-	baseHighDamage := baseCalc * 2.58
+	baseLowDamage := warlock.baseRuneAbilityDamage() * 2.22
+	baseHighDamage := warlock.baseRuneAbilityDamage() * 2.58
 
 	warlock.IncinerateAura = warlock.RegisterAura(core.Aura{
 		Label:    "Incinerate Aura",
@@ -54,15 +51,15 @@ func (warlock *Warlock) registerIncinerateSpell() {
 
 		CritDamageBonus: warlock.ruin(),
 
-		DamageMultiplier:         1 + 0.02*float64(warlock.Talents.Emberstorm),
-		DamageMultiplierAdditive: 1,
+		DamageMultiplierAdditive: 1 + 0.02*float64(warlock.Talents.Emberstorm),
+		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			var baseDamage = sim.Roll(baseLowDamage, baseHighDamage) + spellCoeff*spell.SpellDamage()
 
 			if warlock.LakeOfFireAuras != nil && warlock.LakeOfFireAuras.Get(target).IsActive() {
-				baseDamage *= 1.4
+				baseDamage *= warlock.getLakeOfFireMultiplier()
 			}
 
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)

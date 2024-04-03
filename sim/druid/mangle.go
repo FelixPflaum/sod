@@ -21,7 +21,7 @@ func (druid *Druid) registerMangleBearSpell() {
 		SpellSchool: core.SpellSchoolPhysical,
 		DefenseType: core.DefenseTypeMelee,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
+		Flags:       SpellFlagOmen | core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   20 - float64(druid.Talents.Ferocity),
@@ -64,19 +64,20 @@ func (druid *Druid) registerMangleBearSpell() {
         }
 */
 
-func (druid *Druid) applyMangleCat() {
+func (druid *Druid) registerMangleCatSpell() {
 	if !druid.HasRune(proto.DruidRune_RuneHandsMangle) {
 		return
 	}
 
-	mangleAuras := druid.NewEnemyAuraArray(core.MangleAura)
+	hasGoreRune := druid.HasRune(proto.DruidRune_RuneHelmGore)
 
+	mangleAuras := druid.NewEnemyAuraArray(core.MangleAura)
 	druid.MangleCat = druid.RegisterSpell(Cat, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 409828},
 		SpellSchool: core.SpellSchoolPhysical,
 		DefenseType: core.DefenseTypeMelee,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
+		Flags:       SpellFlagOmen | core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost:   40 - float64(druid.Talents.Ferocity),
@@ -101,6 +102,10 @@ func (druid *Druid) applyMangleCat() {
 			if result.Landed() {
 				druid.AddComboPoints(sim, 1, spell.ComboPointMetrics())
 				mangleAuras.Get(target).Activate(sim)
+
+				if hasGoreRune {
+					druid.rollGoreCatReset(sim)
+				}
 			} else {
 				spell.IssueRefund(sim)
 			}

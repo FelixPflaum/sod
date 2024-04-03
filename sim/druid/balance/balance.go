@@ -69,14 +69,14 @@ func (moonkin *BalanceDruid) GetDruid() *druid.Druid {
 func (moonkin *BalanceDruid) Initialize() {
 	moonkin.Druid.Initialize()
 	moonkin.RegisterBalanceSpells()
-	// moonkin.RegisterFeralCatSpells()
+	moonkin.RegisterFeralCatSpells()
 }
 
 func (moonkin *BalanceDruid) Reset(sim *core.Simulation) {
 	moonkin.Druid.Reset(sim)
 
 	if moonkin.Talents.MoonkinForm {
-		moonkin.Druid.ClearForm(sim)
+		moonkin.CancelShapeshift(sim)
 		moonkin.MoonkinFormAura.Activate(sim)
 	}
 }

@@ -58,6 +58,30 @@ func TestEnhancement(t *testing.T) {
 			EPReferenceStat: proto.Stat_StatAttackPower,
 			StatsToWeigh:    Stats,
 		},
+		{
+			Class:      proto.Class_ClassShaman,
+			Level:      50,
+			Race:       proto.Race_RaceTroll,
+			OtherRaces: []proto.Race{proto.Race_RaceOrc},
+
+			Talents:  Phase3Talents,
+			GearSet:  core.GetGearSet("../../../ui/enhancement_shaman/gear_sets", "phase_2"),
+			Rotation: core.GetAplRotation("../../../ui/enhancement_shaman/apls", "phase_3"),
+			Buffs:    core.FullBuffsPhase3,
+			Consumes: Phase3ConsumesWFWF,
+			OtherConsumes: []core.ConsumesCombo{
+				Phase3ConsumesWFRB,
+				Phase3ConsumesRBRB,
+			},
+			SpecOptions: core.SpecOptionsCombo{Label: "Sync Auto", SpecOptions: PlayerOptionsSyncAuto},
+			OtherSpecOptions: []core.SpecOptionsCombo{
+				{Label: "Sync Delay OH", SpecOptions: PlayerOptionsSyncDelayOH},
+			},
+
+			ItemFilter:      ItemFilters,
+			EPReferenceStat: proto.Stat_StatAttackPower,
+			StatsToWeigh:    Stats,
+		},
 	}))
 }
 
@@ -85,11 +109,23 @@ func BenchmarkSimulate(b *testing.B) {
 			Spec:          PlayerOptionsSyncAuto,
 			Buffs:         core.FullIndividualBuffsPhase2,
 		},
+		{
+			Race:          proto.Race_RaceOrc,
+			Class:         proto.Class_ClassShaman,
+			Level:         50,
+			TalentsString: Phase3Talents,
+			Equipment:     core.GetGearSet("../../../ui/enhancement_shaman/gear_sets", "phase_2").GearSet,
+			Rotation:      core.GetAplRotation("../../../ui/enhancement_shaman/apls", "phase_3").Rotation,
+			Consumes:      Phase3ConsumesWFWF.Consumes,
+			Spec:          PlayerOptionsSyncAuto,
+			Buffs:         core.FullIndividualBuffsPhase2,
+		},
 	}, func(player *proto.Player) { core.SpecBenchmark(b, player) })
 }
 
 var Phase1Talents = "-5005202101"
 var Phase2Talents = "-5005202105023051"
+var Phase3Talents = "05003-5005222105023051"
 
 var PlayerOptionsSyncDelayOH = &proto.Player_EnhancementShaman{
 	EnhancementShaman: &proto.EnhancementShaman{
@@ -157,6 +193,51 @@ var Phase2ConsumesWFRB = core.ConsumesCombo{
 
 var Phase2ConsumesRBRB = core.ConsumesCombo{
 	Label: "Phase 2 Consumes RB/RB",
+	Consumes: &proto.Consumes{
+		AgilityElixir:     proto.AgilityElixir_ElixirOfAgility,
+		DefaultPotion:     proto.Potions_ManaPotion,
+		DragonBreathChili: true,
+		FirePowerBuff:     proto.FirePowerBuff_ElixirOfFirepower,
+		Food:              proto.Food_FoodSagefishDelight,
+		MainHandImbue:     proto.WeaponImbue_RockbiterWeapon,
+		OffHandImbue:      proto.WeaponImbue_RockbiterWeapon,
+		SpellPowerBuff:    proto.SpellPowerBuff_LesserArcaneElixir,
+		StrengthBuff:      proto.StrengthBuff_ScrollOfStrength,
+	},
+}
+
+var Phase3ConsumesWFWF = core.ConsumesCombo{
+	Label: "Phase 3 Consumes WF/WF",
+	Consumes: &proto.Consumes{
+		AgilityElixir:     proto.AgilityElixir_ElixirOfAgility,
+		DefaultPotion:     proto.Potions_ManaPotion,
+		DragonBreathChili: true,
+		FirePowerBuff:     proto.FirePowerBuff_ElixirOfFirepower,
+		Food:              proto.Food_FoodSagefishDelight,
+		MainHandImbue:     proto.WeaponImbue_WindfuryWeapon,
+		OffHandImbue:      proto.WeaponImbue_WindfuryWeapon,
+		SpellPowerBuff:    proto.SpellPowerBuff_LesserArcaneElixir,
+		StrengthBuff:      proto.StrengthBuff_ElixirOfOgresStrength,
+	},
+}
+
+var Phase3ConsumesWFRB = core.ConsumesCombo{
+	Label: "Phase 3 Consumes WF/RB",
+	Consumes: &proto.Consumes{
+		AgilityElixir:     proto.AgilityElixir_ElixirOfAgility,
+		DefaultPotion:     proto.Potions_ManaPotion,
+		DragonBreathChili: true,
+		FirePowerBuff:     proto.FirePowerBuff_ElixirOfFirepower,
+		Food:              proto.Food_FoodSagefishDelight,
+		MainHandImbue:     proto.WeaponImbue_WindfuryWeapon,
+		OffHandImbue:      proto.WeaponImbue_RockbiterWeapon,
+		SpellPowerBuff:    proto.SpellPowerBuff_LesserArcaneElixir,
+		StrengthBuff:      proto.StrengthBuff_ScrollOfStrength,
+	},
+}
+
+var Phase3ConsumesRBRB = core.ConsumesCombo{
+	Label: "Phase 3 Consumes RB/RB",
 	Consumes: &proto.Consumes{
 		AgilityElixir:     proto.AgilityElixir_ElixirOfAgility,
 		DefaultPotion:     proto.Potions_ManaPotion,

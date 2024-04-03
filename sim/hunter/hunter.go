@@ -48,9 +48,11 @@ type Hunter struct {
 	ExplosiveShot  *core.Spell
 	ExplosiveTrap  *core.Spell
 	ImmolationTrap *core.Spell
+	FrostTrap      *core.Spell
 	KillCommand    *core.Spell
 	KillShot       *core.Spell
 	MultiShot      *core.Spell
+	FocusFire      *core.Spell
 	RapidFire      *core.Spell
 	RaptorStrike   *core.Spell
 	FlankingStrike *core.Spell
@@ -65,6 +67,7 @@ type Hunter struct {
 	SerpentStingChimeraShot *core.Spell
 
 	FlankingStrikeAura *core.Aura
+	RaptorFuryAura     *core.Aura
 	SniperTrainingAura *core.Aura
 	CobraStrikesAura   *core.Aura
 
@@ -117,12 +120,15 @@ func (hunter *Hunter) Initialize() {
 	hunter.registerWingClipSpell()
 
 	fireTraps := hunter.NewTimer()
+	frostTraps := hunter.NewTimer()
 
 	hunter.registerExplosiveTrapSpell(fireTraps)
 	hunter.registerImmolationTrapSpell(fireTraps)
+	hunter.registerFrostTrapSpell(frostTraps)
 
 	hunter.registerKillCommand()
 	hunter.registerRapidFire()
+	hunter.registerFocusFireSpell()
 }
 
 func (hunter *Hunter) Reset(sim *core.Simulation) {
@@ -192,8 +198,6 @@ func NewHunter(character *core.Character, options *proto.Player) *Hunter {
 	}
 
 	hunter.EnableAutoAttacks(hunter, core.AutoAttackOptions{
-		// We don't know crit multiplier until later when we see the target so just
-		// use 0 for now.
 		MainHand:        hunter.WeaponFromMainHand(),
 		OffHand:         hunter.WeaponFromOffHand(),
 		Ranged:          rangedWeapon,
@@ -248,7 +252,11 @@ func (hunter *Hunter) HasRune(rune proto.HunterRune) bool {
 	return hunter.HasRuneById(int32(rune))
 }
 
-func (hunter *Hunter) OnGCDReady(sim *core.Simulation) {
+func (hunter *Hunter) baseRuneAbilityDamage() float64 {
+	return 2.976264 + 0.641066*float64(hunter.Level) + 0.022519*float64(hunter.Level*hunter.Level)
+}
+
+func (hunter *Hunter) OnGCDReady(_ *core.Simulation) {
 
 }
 

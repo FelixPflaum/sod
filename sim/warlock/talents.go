@@ -195,10 +195,8 @@ func (warlock *Warlock) applyDemonicSacrifice() {
 			switch warlock.Options.Summon {
 			case proto.WarlockOptions_Imp:
 				warlock.demonicSacrificeAura = impAura
-				break
 			case proto.WarlockOptions_Succubus:
 				warlock.demonicSacrificeAura = succubusAura
-				break
 			case proto.WarlockOptions_Voidwalker:
 				break
 			case proto.WarlockOptions_Felhunter:
@@ -224,7 +222,7 @@ func (warlock *Warlock) applyWeaponImbue() {
 		return
 	}
 
-	level := warlock.GetCharacter().Level
+	level := warlock.Level
 	if warlock.Options.WeaponImbue == proto.WarlockOptions_Firestone {
 		warlock.applyFirestone()
 	}
@@ -236,7 +234,7 @@ func (warlock *Warlock) applyWeaponImbue() {
 }
 
 func (warlock *Warlock) applyFirestone() {
-	level := warlock.GetCharacter().Level
+	level := warlock.Level
 
 	damageMin := 0.0
 	damageMax := 0.0
@@ -346,6 +344,10 @@ func (warlock *Warlock) applyNightfall() {
 			if spell == warlock.Corruption || spell == warlock.DrainLife {
 				if sim.Proc(nightfallProcChance, "Nightfall") {
 					warlock.NightfallProcAura.Activate(sim)
+
+					for _, spell := range warlock.ShadowCleave {
+						spell.CD.Reset()
+					}
 				}
 			}
 		},

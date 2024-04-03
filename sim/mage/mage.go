@@ -57,8 +57,10 @@ type Mage struct {
 	ArcaneMissiles          []*core.Spell
 	ArcaneMissilesTickSpell []*core.Spell
 	ArcaneSurge             *core.Spell
+	BalefireBolt            *core.Spell
 	BlastWave               []*core.Spell
 	Blizzard                []*core.Spell
+	DeepFreeze              *core.Spell
 	Fireball                []*core.Spell
 	FireBlast               []*core.Spell
 	Flamestrike             []*core.Spell
@@ -153,4 +155,8 @@ func NewMage(character *core.Character, options *proto.Player) *Mage {
 
 func (mage *Mage) HasRune(rune proto.MageRune) bool {
 	return mage.HasRuneById(int32(rune))
+}
+
+func (mage *Mage) baseRuneAbilityDamage() float64 {
+	return 13.828124 + 0.018012*float64(mage.Level) + 0.044141*float64(mage.Level*mage.Level)
 }

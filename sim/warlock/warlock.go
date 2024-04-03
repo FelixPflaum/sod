@@ -10,6 +10,8 @@ import (
 
 var TalentTreeSizes = [3]int{17, 17, 16}
 
+const SpellFlagHaunt = core.SpellFlagAgentReserved1
+
 type Warlock struct {
 	core.Character
 	Talents *proto.WarlockTalents
@@ -17,24 +19,26 @@ type Warlock struct {
 
 	Pet *WarlockPet
 
-	ChaosBolt    *core.Spell
-	Conflagrate  *core.Spell
-	Corruption   *core.Spell
-	DarkPact     *core.Spell
-	DrainSoul    *core.Spell
-	Haunt        *core.Spell
-	Immolate     *core.Spell
-	Incinerate   *core.Spell
-	LifeTap      *core.Spell
-	SearingPain  *core.Spell
-	ShadowBolt   *core.Spell
-	ShadowCleave *core.Spell
-	Shadowburn   *core.Spell
-	SoulFire     *core.Spell
-	DemonicGrace *core.Spell
-	DrainLife    *core.Spell
-	RainOfFire   *core.Spell
-	SiphonLife   *core.Spell
+	ChaosBolt          *core.Spell
+	Conflagrate        *core.Spell
+	Corruption         *core.Spell
+	DarkPact           *core.Spell
+	DrainSoul          *core.Spell
+	Haunt              *core.Spell
+	Immolate           []*core.Spell
+	Incinerate         *core.Spell
+	LifeTap            *core.Spell
+	SearingPain        *core.Spell
+	ShadowBolt         *core.Spell
+	ShadowCleave       []*core.Spell
+	Shadowburn         *core.Spell
+	SoulFire           *core.Spell
+	DemonicGrace       *core.Spell
+	DrainLife          *core.Spell
+	RainOfFire         *core.Spell
+	SiphonLife         *core.Spell
+	DeathCoil          *core.Spell
+	UnstableAffliction *core.Spell
 
 	CurseOfElements          *core.Spell
 	CurseOfElementsAuras     core.AuraArray
@@ -71,6 +75,7 @@ type Warlock struct {
 	petStmBonusSP        float64
 	demonicKnowledgeSp   float64
 	demonicSacrificeAura *core.Aura
+	zilaGularAura        *core.Aura
 }
 
 func (warlock *Warlock) GetCharacter() *core.Character {
@@ -89,9 +94,9 @@ func (warlock *Warlock) Initialize() {
 	warlock.registerShadowBoltSpell()
 	warlock.registerShadowCleaveSpell()
 	warlock.registerLifeTapSpell()
+	warlock.registerSoulFireSpell()
+	warlock.registerUnstableAfflictionSpell()
 	// warlock.registerSeedSpell()
-	// warlock.registerSoulFireSpell()
-	// warlock.registerUnstableAfflictionSpell()
 	// warlock.registerDrainSoulSpell()
 	warlock.registerConflagrateSpell()
 	warlock.registerHauntSpell()
@@ -106,6 +111,7 @@ func (warlock *Warlock) Initialize() {
 	warlock.registerDrainLifeSpell()
 	warlock.registerRainOfFireSpell()
 	warlock.registerShadowflameSpell()
+	warlock.registerDeathCoilSpell()
 
 	warlock.registerCurseOfElementsSpell()
 	warlock.registerCurseOfShadowSpell()
@@ -113,6 +119,7 @@ func (warlock *Warlock) Initialize() {
 	warlock.registerCurseOfAgonySpell()
 	warlock.registerAmplifyCurseSpell()
 	// warlock.registerCurseOfDoomSpell()
+	warlock.registerImmolationAuraSpell()
 }
 
 func (warlock *Warlock) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
@@ -160,7 +167,7 @@ func NewWarlock(character *core.Character, options *proto.Player, warlockOptions
 			40: 9.0,
 			50: 12.0,
 			60: 15.0,
-		}[warlock.GetCharacter().Level]
+		}[warlock.Level]
 
 		warlock.AddStat(stats.Armor, armor)
 		warlock.AddStat(stats.ShadowResistance, shadowRes)
@@ -177,7 +184,11 @@ func (warlock *Warlock) HasRune(rune proto.WarlockRune) bool {
 	return warlock.HasRuneById(int32(rune))
 }
 
-func (warlock *Warlock) OnGCDReady(sim *core.Simulation) {
+func (warlock *Warlock) baseRuneAbilityDamage() float64 {
+	return 6.568597 + 0.672028*float64(warlock.Level) + 0.031721*float64(warlock.Level*warlock.Level)
+}
+
+func (warlock *Warlock) OnGCDReady(_ *core.Simulation) {
 }
 
 // Agent is a generic way to access underlying warlock on any of the agents.

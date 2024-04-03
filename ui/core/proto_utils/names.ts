@@ -1,5 +1,5 @@
 import { ResourceType } from '../proto/api.js';
-import { ArmorType, Class, ItemSlot, Profession, PseudoStat, Race, RangedWeaponType, Stat, WeaponType } from '../proto/common.js';
+import { ArmorType, Class, ItemSlot, ItemType, Profession, PseudoStat, Race, RangedWeaponType, Stat, WeaponType } from '../proto/common.js';
 import { RepFaction, RepLevel, SourceFilterOption } from '../proto/ui.js';
 
 export const armorTypeNames: Map<ArmorType, string> = new Map([
@@ -207,8 +207,6 @@ export const pseudoStatNames: Map<PseudoStat, string> = new Map([
 	[PseudoStat.PseudoStatOffHandDps, 'Off Hand DPS'],
 	[PseudoStat.PseudoStatRangedDps, 'Ranged DPS'],
 	[PseudoStat.PseudoStatBlockValueMultiplier, 'Block Value Multiplier'],
-	[PseudoStat.PseudoStatDodge, 'Dodge Chance'],
-	[PseudoStat.PseudoStatParry, 'Parry Chance'],
 ]);
 
 export function getClassStatName(stat: Stat, playerClass: Class): string {
@@ -220,6 +218,23 @@ export function getClassStatName(stat: Stat, playerClass: Class): string {
 		return statName;
 	}
 }
+
+export const itemTypeNames: Map<ItemType, string> = new Map([
+	[ItemType.ItemTypeHead, 'Helm'],
+	[ItemType.ItemTypeNeck, 'Neck'],
+	[ItemType.ItemTypeShoulder, 'Shoulders'],
+	[ItemType.ItemTypeBack, 'Cloak'],
+	[ItemType.ItemTypeChest, 'Chest'],
+	[ItemType.ItemTypeWrist, 'Bracers'],
+	[ItemType.ItemTypeHands, 'Gloves'],
+	[ItemType.ItemTypeWaist, 'Belt'],
+	[ItemType.ItemTypeLegs, 'Pants'],
+	[ItemType.ItemTypeFeet, 'Boots'],
+	[ItemType.ItemTypeFinger, 'Ring'],
+	[ItemType.ItemTypeTrinket, 'Trinket'],
+	[ItemType.ItemTypeWeapon, 'Weapon'],
+	[ItemType.ItemTypeRanged, 'Ranged'],
+]);
 
 export const slotNames: Map<ItemSlot, string> = new Map([
 	[ItemSlot.ItemSlotHead, 'Head'],

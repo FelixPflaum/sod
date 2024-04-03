@@ -8,7 +8,7 @@ import (
 )
 
 func (wp *WarlockPet) registerFireboltSpell() {
-	warlockLevel := wp.owner.GetCharacter().Level
+	warlockLevel := wp.owner.Level
 	// assuming max rank available
 	rank := map[int32]int{25: 3, 40: 5, 50: 6, 60: 7}[warlockLevel]
 
@@ -51,7 +51,7 @@ func (wp *WarlockPet) registerFireboltSpell() {
 			baseDamage := sim.Roll(baseDamage[0], baseDamage[1]) + spellCoeff*spell.SpellDamage()
 
 			if wp.owner.LakeOfFireAuras != nil && wp.owner.LakeOfFireAuras.Get(target).IsActive() {
-				baseDamage *= 1.4
+				baseDamage *= wp.owner.getLakeOfFireMultiplier()
 			}
 
 			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)
@@ -60,7 +60,7 @@ func (wp *WarlockPet) registerFireboltSpell() {
 }
 
 func (wp *WarlockPet) registerLashOfPainSpell() {
-	warlockLevel := wp.owner.GetCharacter().Level
+	warlockLevel := wp.owner.Level
 	// assuming max rank available
 	rank := map[int32]int{25: 1, 40: 3, 50: 4, 60: 6}[warlockLevel]
 

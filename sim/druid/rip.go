@@ -52,7 +52,7 @@ var ripRanks = []RipRankInfo{
 	},
 }
 
-var RipTicks int32 = 8
+const RipTicks int32 = 6
 
 func (druid *Druid) registerRipSpell() {
 	// Add highest available Rip rank for level.
@@ -70,7 +70,7 @@ func (druid *Druid) newRipSpellConfig(ripRank RipRankInfo) core.SpellConfig {
 		ActionID:    core.ActionID{SpellID: ripRank.id},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
+		Flags:       SpellFlagOmen | core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost:   30,
@@ -122,6 +122,7 @@ func (druid *Druid) newRipSpellConfig(ripRank RipRankInfo) core.SpellConfig {
 				spell.SpellMetrics[target.UnitIndex].Hits--
 				dot := spell.Dot(target)
 				dot.NumberOfTicks = RipTicks
+				dot.RecomputeAuraDuration()
 				dot.Apply(sim)
 				druid.SpendComboPoints(sim, spell.ComboPointMetrics())
 			} else {
