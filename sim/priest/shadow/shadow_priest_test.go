@@ -17,7 +17,7 @@ func TestShadow(t *testing.T) {
 		{
 			Class:      proto.Class_ClassPriest,
 			Level:      25,
-			Race:       proto.Race_RaceUndead,
+			Race:       proto.Race_RaceTroll,
 			OtherRaces: []proto.Race{proto.Race_RaceNightElf},
 
 			Talents:     Phase1Talents,
@@ -34,7 +34,7 @@ func TestShadow(t *testing.T) {
 		{
 			Class:      proto.Class_ClassPriest,
 			Level:      40,
-			Race:       proto.Race_RaceUndead,
+			Race:       proto.Race_RaceTroll,
 			OtherRaces: []proto.Race{proto.Race_RaceNightElf},
 
 			Talents:     Phase2Talents,
@@ -42,6 +42,23 @@ func TestShadow(t *testing.T) {
 			Rotation:    core.GetAplRotation("../../../ui/shadow_priest/apls", "phase_2"),
 			Buffs:       core.FullBuffsPhase2,
 			Consumes:    Phase2Consumes,
+			SpecOptions: core.SpecOptionsCombo{Label: "Basic", SpecOptions: PlayerOptionsBasic},
+
+			ItemFilter:      ItemFilters,
+			EPReferenceStat: proto.Stat_StatSpellPower,
+			StatsToWeigh:    Stats,
+		},
+		{
+			Class:      proto.Class_ClassPriest,
+			Level:      50,
+			Race:       proto.Race_RaceTroll,
+			OtherRaces: []proto.Race{proto.Race_RaceNightElf},
+
+			Talents:     Phase3Talents,
+			GearSet:     core.GetGearSet("../../../ui/shadow_priest/gear_sets", "phase_3"),
+			Rotation:    core.GetAplRotation("../../../ui/shadow_priest/apls", "phase_3"),
+			Buffs:       core.FullBuffsPhase3,
+			Consumes:    Phase3Consumes,
 			SpecOptions: core.SpecOptionsCombo{Label: "Basic", SpecOptions: PlayerOptionsBasic},
 
 			ItemFilter:      ItemFilters,
@@ -69,6 +86,7 @@ func BenchmarkSimulate(b *testing.B) {
 
 var Phase1Talents = "-20535000001"
 var Phase2Talents = "--5022204002501251"
+var Phase3Talents = "-0055-5022204002501251"
 
 var Phase1Consumes = core.ConsumesCombo{
 	Label: "Phase 1 Consumes",
@@ -86,6 +104,18 @@ var Phase2Consumes = core.ConsumesCombo{
 		Food:           proto.Food_FoodSagefishDelight,
 		MainHandImbue:  proto.WeaponImbue_LesserWizardOil,
 		SpellPowerBuff: proto.SpellPowerBuff_LesserArcaneElixir,
+	},
+}
+
+var Phase3Consumes = core.ConsumesCombo{
+	Label: "Phase 3 Consumes",
+	Consumes: &proto.Consumes{
+		DefaultAtalAi:   proto.AtalAi_AtalAiForbiddenMagic,
+		DefaultPotion:   proto.Potions_GreaterManaPotion,
+		Food:            proto.Food_FoodNightfinSoup,
+		MainHandImbue:   proto.WeaponImbue_WizardOil,
+		SpellPowerBuff:  proto.SpellPowerBuff_GreaterArcaneElixir,
+		ShadowPowerBuff: proto.ShadowPowerBuff_ElixirOfShadowPower,
 	},
 }
 
