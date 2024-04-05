@@ -514,9 +514,29 @@ func (result *SpellResult) applyTargetModifiers(spell *Spell, attackTable *Attac
 		return
 	}
 
-	// TODO: Add other schools. Multischools should then chose highest.
-	if spell.SpellSchool.Matches(SpellSchoolPhysical) && spell.Flags.Matches(SpellFlagIncludeTargetBonusDamage) {
-		result.Damage += attackTable.Defender.PseudoStats.BonusPhysicalDamageTaken
+	var bonusCoef float64
+	if isPeriodic {
+		if spell.aoeDot != nil {
+			bonusCoef = spell.aoeDot.BonusCoefficient
+		} else {
+			bonusCoef = spell.Dot(attackTable.Defender).BonusCoefficient
+		}
+	} else {
+		bonusCoef = spell.BonusCoefficient
+	}
+	if bonusCoef > 0 {
+		if spell.SchoolIndex.IsMultiSchool() {
+			result.Damage += bonusCoef * attackTable.Defender.PseudoStats.BonusDamageTaken[spell.SchoolIndex]
+		} else {
+			bonusDmgTaken := 0.0
+			for _, baseIdx := range spell.SchoolBaseIndices {
+				b := attackTable.Defender.PseudoStats.BonusDamageTaken[baseIdx]
+				if b > bonusDmgTaken {
+					bonusDmgTaken = b
+				}
+			}
+			result.Damage += bonusCoef * bonusDmgTaken
+		}
 	}
 
 	result.Damage *= spell.TargetDamageMultiplier(attackTable, isPeriodic)
