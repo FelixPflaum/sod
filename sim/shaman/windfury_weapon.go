@@ -42,7 +42,7 @@ func (shaman *Shaman) newWindfuryImbueSpell(isMH bool) *core.Spell {
 		SpellSchool: core.SpellSchoolPhysical,
 		DefenseType: core.DefenseTypeMelee,
 		ProcMask:    procMask | core.ProcMaskWeaponProc,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics,
 
 		DamageMultiplier: damageMultiplier,
 		ThreatMultiplier: 1,
