@@ -515,7 +515,7 @@ func (result *SpellResult) applyTargetModifiers(spell *Spell, attackTable *Attac
 		bonusCoef = spell.BonusCoefficient
 	}
 	if bonusCoef > 0 {
-		if spell.SchoolIndex.IsMultiSchool() {
+		if !spell.SchoolIndex.IsMultiSchool() {
 			result.Damage += bonusCoef * attackTable.Defender.PseudoStats.BonusDamageTaken[spell.SchoolIndex]
 		} else {
 			bonusDmgTaken := 0.0
