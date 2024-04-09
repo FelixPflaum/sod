@@ -45,10 +45,8 @@ func (druid *Druid) GetCatWeapon(level int32) core.Weapon {
 	case 60:
 		// TODO: Level 60 values
 	case 50:
-		// TODO: Not entirely verified. Value from Balor (Feral mod)
-		// Avg: 46.6
-		claws.BaseDamageMin = 37.28
-		claws.BaseDamageMax = 55.92
+		claws.BaseDamageMin = 37.32432
+		claws.BaseDamageMax = 55.98649
 	case 40:
 		claws.BaseDamageMin = 27.80305996
 		claws.BaseDamageMax = 41.70460054
