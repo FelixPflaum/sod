@@ -9,6 +9,7 @@ import {
 	BulkSimResult,
 	ComputeStatsRequest,
 	ComputeStatsResult,
+	FileVersion,
 	ProgressMetrics,
 	RaidSimRequest,
 	RaidSimRequestSplitRequest,
@@ -275,7 +276,14 @@ class SimWorker {
 			const { id, msg, outputData } = data;
 			switch (msg) {
 				case 'ready':
-					this.wasmWorker = !!outputData && !!outputData[0];
+					this.wasmWorker = !!data.wasmVersionId;
+					if (this.wasmWorker) { 
+						const jsVersionId = FileVersion[0];
+						if (jsVersionId != data.wasmVersionId) {
+							alert("File version mismatch, please reload the page.");
+							return;
+						}
+					}
 					this.postMessage({ msg: 'setID', id: this.workerId.toString() });
 					this.resolveReady!();
 					this.setTaskActive('setup', false);

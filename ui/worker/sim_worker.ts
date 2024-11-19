@@ -5,7 +5,7 @@ type SimRequestSync = (data: Uint8Array) => Uint8Array;
 
 // Functions provided or used by the wasm lib.
 declare global {
-	function wasmready(): void;
+	function wasmready(versionId: string): void;
 	const bulkSimAsync: SimRequestAsync;
 	const bulkSimCombos: SimRequestSync;
 	const computeStats: SimRequestSync;
@@ -24,7 +24,7 @@ declare global {
 
 // Wasm binary calls this function when its done loading.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-globalThis.wasmready = function () {
+globalThis.wasmready = function (versionId) {
 	new WorkerInterface({
 		bulkSimAsync: bulkSimAsync,
 		//bulkSimCombos: bulkSimCombos,
@@ -40,7 +40,7 @@ globalThis.wasmready = function () {
 		raidSimRequestSplit: raidSimRequestSplit,
 		raidSimResultCombination: raidSimResultCombination,
 		abortById: abortById,
-	}).ready(true);
+	}).ready(versionId);
 };
 
 const go = new Go();

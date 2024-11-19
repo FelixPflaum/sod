@@ -56,6 +56,7 @@ export interface WorkerSendMessageIdConfirm extends WorkerSendMessageBodyBase {
 
 export interface WorkerSendMessageReady extends WorkerSendMessageBodyBase {
 	msg: 'ready';
+	wasmVersionId?: string;
 }
 
 export interface WorkerSendMessageProgress extends Required<WorkerSendMessageBodyBase> {

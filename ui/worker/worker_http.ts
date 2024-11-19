@@ -61,5 +61,5 @@ export const setupHttpWorker = (baseURL: string) => {
 		raidSimRequestSplit: noWasmConcurrency,
 		raidSimResultCombination: noWasmConcurrency,
 		abortById: syncHandler,
-	}).ready(false);
+	}).ready();
 };

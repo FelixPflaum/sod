@@ -15,6 +15,13 @@ import "shaman.proto";
 import "warlock.proto";
 import "warrior.proto";
 
+enum FileVersion {
+	// Browsers may cache JS and only reload wasm when opening unloaded tabs.
+	// If you make changes that require both UI and wasm code to be reloaded
+	// change this key to a random value to notify the user in case of a version mismatch.
+    sdhfw8sd7gws9d7gh9s = 0;
+}
+
 // NextIndex: 49
 message Player {
 	// Label used for logging.

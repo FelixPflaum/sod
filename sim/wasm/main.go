@@ -38,7 +38,7 @@ func main() {
 	js.Global().Set("statWeightsAsync", js.FuncOf(statWeightsAsync))
 	js.Global().Set("bulkSimAsync", js.FuncOf(bulkSimAsync))
 	js.Global().Set("abortById", js.FuncOf(abortById))
-	js.Global().Call("wasmready")
+	js.Global().Call("wasmready", proto.FileVersion_name[0])
 	<-c
 }
 
@@ -275,7 +275,7 @@ func bulkSimAsync(this js.Value, args []js.Value) interface{} {
 	}
 
 	reporter := make(chan *proto.ProgressMetrics, 100)
-	
+
 	go core.RunBulkSimAsync(rsr, reporter, requestId)
 	go processAsyncProgress(args[1], reporter)
 	return js.Undefined()

@@ -53,9 +53,9 @@ export class WorkerInterface {
 
 	/**
 	 * Tell UI that the worker is ready.
-	 * @param isWasm true if worker is using wasm.
+	 * @param isWasm wasm versionId if worker is using wasm.
 	 */
-	ready(isWasm: boolean) {
-		this.postMessage({ msg: 'ready', outputData: new Uint8Array([+isWasm]) });
+	ready(wasmVersionId?: string) {
+		this.postMessage({ msg: 'ready', wasmVersionId: wasmVersionId });
 	}
 }
